@@ -30,7 +30,8 @@ with nft_tokens as (
     )
     select 
         cm.*,
-        (tk0.symbol || '-' || tk1.symbol) as pair_symbol,
+        tk0.symbol as symbol0,
+        tk1.symbol as symbol1,
         coalesce(tk0.decimals,18) as tk0decimal,
         coalesce(tk1.decimals,18) as tk1decimal
     from call_mint cm
@@ -54,11 +55,18 @@ add_single_liquidity as (
     select 
         il.evt_tx_hash as tx_hash
         , il.evt_block_time as block_time
-        , nft.pair_symbol
+        , (nft.symbol0 || '-' || nft.symbol1) as pair_symbol
+        --------------------------------
+        , nft.symbol0
         , (il.amount0 / power(10, nft.tk0decimal)) as amt0_float
         , (il.amount0 / power(10, nft.tk0decimal) * p0.price) as amt0_usd
+        , nft.symbol1
         , (il.amount1 / power(10, nft.tk1decimal)) as amt1_float
         , (il.amount1 / power(10, nft.tk1decimal) * p1.price) as amt1_usd
+        --------------------------------
+        , case when il.amount0>0 then nft.token0 else nft.token1 end as short_token
+        , case when il.amount0=0 then nft.token0 else nft.token1 end as long_token
+        --------------------------------
         , il.liquidity
         , il.tokenId
         , nft.liquid_provider
@@ -75,4 +83,10 @@ add_single_liquidity as (
         (il.amount0=0 or il.amount1=0) -- add redundant constraints to reduce result size and speed up
         and il.evt_block_time >= now() - interval '{{back_days}}' day
 )
-select * from add_single_liquidity
+
+select 
+    pair_symbol,
+    sum(amt0_usd) as total_short0_usd,
+    sum(amt1_usd) as total_short1_usd
+from add_single_liquidity
+group by pair_symbol
