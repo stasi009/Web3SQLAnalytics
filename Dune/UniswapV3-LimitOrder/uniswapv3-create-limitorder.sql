@@ -87,6 +87,8 @@ add_single_liquidity as (
 select 
     pair_symbol,
     sum(amt0_usd) as total_short0_usd,
-    sum(amt1_usd) as total_short1_usd
+    sum(amt1_usd) as total_short1_usd,
+    abs(sum(amt0_usd) - sum(amt1_usd))/cast((sum(amt0_usd) + sum(amt1_usd)) as double) as divergence
 from add_single_liquidity
 group by pair_symbol
+order by divergence desc
