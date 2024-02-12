@@ -154,6 +154,9 @@ select
     rl.amt1_usd as rmv_usd1,
     rl.liquidity as rmv_liquidity,
 
+    (rl.amt0_usd + rl.amt1_usd - al.amt0_usd - al.amt1_usd) as profit,
+    (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd)-1 as profit_percent,
+
     case 
         --    add liquidity (x=0,y>0), remove liquidity (x>0, y=0)
         -- or add liquidity (x>0,y=0), remove liquidity (x=0, y>0)
