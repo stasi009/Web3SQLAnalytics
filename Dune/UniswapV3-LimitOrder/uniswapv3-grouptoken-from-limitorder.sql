@@ -117,3 +117,4 @@ from token_short_amount sa
 join token_long_amount la
     on sa.tk_symbol = la.tk_symbol
     and sa.token = la.token
+where sa.short_usd + la.long_usd >= 100000
