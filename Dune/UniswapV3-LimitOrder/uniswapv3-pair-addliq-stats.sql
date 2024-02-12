@@ -104,12 +104,19 @@ pair_add_liquidity_stats as (
         group by 1
 )
 
-select 
+select  
     pair_symbol,
-    Neutral_USD,
-    (Neutral_USD / Total_USD) as Neutral_Percent,
-    S0L1_USD,
-    (S0L1_USD / Total_USD) as S0L1_Percent,
-    S1L0_USD,
-    (S1L0_USD / Total_USD) as S1L0__Percent
-from pair_add_liquidity_stats 
+    lp_intention,
+    sum(amt0_usd + amt1_usd) as total_usd
+from add_liquidity
+group by 1,2
+
+-- select 
+--     pair_symbol,
+--     Neutral_USD,
+--     (Neutral_USD / Total_USD) as Neutral_Percent,
+--     S0L1_USD,
+--     (S0L1_USD / Total_USD) as S0L1_Percent,
+--     S1L0_USD,
+--     (S1L0_USD / Total_USD) as S1L0__Percent
+-- from pair_add_liquidity_stats 
