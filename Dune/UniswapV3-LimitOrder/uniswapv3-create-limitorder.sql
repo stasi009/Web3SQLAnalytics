@@ -65,7 +65,9 @@ add_single_liquidity as (
         , (il.amount1 / power(10, nft.tk1decimal) * p1.price) as amt1_usd
         --------------------------------
         , case when il.amount0>0 then nft.token0 else nft.token1 end as short_token
+        , case when il.amount0>0 then nft.symbol0 else nft.symbol1 end as short_symbol
         , case when il.amount0=0 then nft.token0 else nft.token1 end as long_token
+        , case when il.amount0=0 then nft.symbol0 else nft.symbol1 end as long_symbol
         --------------------------------
         , il.liquidity
         , il.tokenId
@@ -82,13 +84,36 @@ add_single_liquidity as (
     where 
         (il.amount0=0 or il.amount1=0) -- add redundant constraints to reduce result size and speed up
         and il.evt_block_time >= now() - interval '{{back_days}}' day
+),
+token_short_amount as (
+    select 
+        short_symbol as tk_symbol,
+        short_token as token,
+        -- one of amt0_usd and amt1_usd is zero
+        sum(amt0_usd + amt1_usd) as short_usd,
+        count(tx_hash) as num_short_txn
+    from add_single_liquidity
+    group by 1,2
+),
+token_long_amount as (
+    select 
+        long_symbol as tk_symbol,
+        long_token as token,
+        -- one of amt0_usd and amt1_usd is zero
+        sum(amt0_usd + amt1_usd) as long_usd,
+        count(tx_hash) as num_long_txn
+    from add_single_liquidity
+    group by 1,2
 )
-
 select 
-    pair_symbol,
-    sum(amt0_usd) as total_short0_usd,
-    sum(amt1_usd) as total_short1_usd,
-    abs(sum(amt0_usd) - sum(amt1_usd))/cast((sum(amt0_usd) + sum(amt1_usd)) as double) as divergence
-from add_single_liquidity
-group by pair_symbol
-order by divergence desc
+    sa.tk_symbol,
+    sa.token,
+    sa.short_usd,
+    sa.num_short_txn,
+    la.long_usd,
+    la.num_long_txn,
+    cast((sa.short_usd - la.long_usd) as double)/(sa.short_usd + la.long_usd) as short_divergence
+from token_short_amount sa 
+join token_long_amount la
+    on sa.tk_symbol = la.tk_symbol
+    and sa.token = la.token
