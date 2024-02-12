@@ -51,7 +51,7 @@ prices as (
     where blockchain = 'ethereum'
         and minute >= now() - interval '{{back_days}}' day
 ),
-add_single_liquidity as (
+add_liquidity as (
     select 
         il.evt_tx_hash as tx_hash
         , il.evt_block_time as block_time
@@ -64,10 +64,12 @@ add_single_liquidity as (
         , (il.amount1 / power(10, nft.tk1decimal)) as amt1_float
         , (il.amount1 / power(10, nft.tk1decimal) * p1.price) as amt1_usd
         --------------------------------
-        , case when il.amount0>0 then nft.token0 else nft.token1 end as short_token
-        , case when il.amount0>0 then nft.symbol0 else nft.symbol1 end as short_symbol
-        , case when il.amount0=0 then nft.token0 else nft.token1 end as long_token
-        , case when il.amount0=0 then nft.symbol0 else nft.symbol1 end as long_symbol
+        , case 
+            when il.amount0 > 0 and il.amount1 > 0 then 'Neutral' -- provide in-range liquidity
+            when il.amount0 > 0 and il.amount1 = 0 then 'S0L1' -- short 0 long 1
+            when il.amount0 = 0 and il.amount1 > 0 then 'S1L0' -- short 1 long 0
+            else null -- impossible
+            end as lp_intention 
         --------------------------------
         , il.liquidity
         , il.tokenId
@@ -82,39 +84,32 @@ add_single_liquidity as (
         on p1.contract_address = nft.token1
         and p1.minute = date_trunc('minute',il.evt_block_time)
     where 
-        (il.amount0=0 or il.amount1=0) -- add redundant constraints to reduce result size and speed up
-        and il.evt_block_time >= now() - interval '{{back_days}}' day
+        il.evt_block_time >= now() - interval '{{back_days}}' day
 ),
-token_short_amount as (
+pair_add_liquidity_stats as (
     select 
-        short_symbol as tk_symbol,
-        short_token as token,
-        -- one of amt0_usd and amt1_usd is zero
-        sum(amt0_usd + amt1_usd) as short_usd,
-        count(tx_hash) as num_short_txn
-    from add_single_liquidity
-    group by 1,2
-),
-token_long_amount as (
-    select 
-        long_symbol as tk_symbol,
-        long_token as token,
-        -- one of amt0_usd and amt1_usd is zero
-        sum(amt0_usd + amt1_usd) as long_usd,
-        count(tx_hash) as num_long_txn
-    from add_single_liquidity
-    group by 1,2
+        pair_symbol,
+        sum(total_usd) as Total_USD,
+        sum(case when lp_intention = 'Neutral' then total_usd else 0 end) as Neutral_USD,
+        sum(case when lp_intention = 'S0L1' then total_usd else 0 end) as S0L1_USD,
+        sum(case when lp_intention = 'S1L0' then total_usd else 0 end) as S1L0_USD
+    from (
+        select  
+            pair_symbol,
+            lp_intention,
+            sum(amt0_usd + amt1_usd) as total_usd
+        from add_liquidity
+        group by 1,2
+    )
+        group by 1
 )
+
 select 
-    sa.tk_symbol,
-    sa.token,
-    sa.short_usd,
-    sa.num_short_txn,
-    la.long_usd,
-    la.num_long_txn,
-    cast((sa.short_usd - la.long_usd) as double)/(sa.short_usd + la.long_usd) as short_divergence
-from token_short_amount sa 
-join token_long_amount la
-    on sa.tk_symbol = la.tk_symbol
-    and sa.token = la.token
-where sa.short_usd + la.long_usd >= 100000
+    pair_symbol,
+    Neutral_USD,
+    (Neutral_USD / Total_USD) as Neutral_Percent,
+    S0L1_USD,
+    (S0L1_USD / Total_USD) as S0L1_Percent,
+    S1L0_USD,
+    (S1L0_USD / Total_USD) as S1L0__Percent
+from pair_add_liquidity_stats 
