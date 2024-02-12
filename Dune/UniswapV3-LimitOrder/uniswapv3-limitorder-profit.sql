@@ -135,55 +135,64 @@ agg_remove_liquidity as (
         sum(liquidity) as liquidity
     from remove_liquidity
     group by 1,2,3,4
+),
+limitorder_profit_status as (
+    select
+        al.tokenId,
+        al.symbol0,
+        al.symbol1,
+
+        al.amt0_float as add_float0,
+        al.amt0_usd as add_usd0,
+        al.amt1_float as add_float1,
+        al.amt1_usd as add_usd1,
+        al.liquidity as add_liquidity,
+
+        rl.amt0_float as rmv_float0,
+        rl.amt0_usd as rmv_usd0,
+        rl.amt1_float as rmv_float1,
+        rl.amt1_usd as rmv_usd1,
+        rl.liquidity as rmv_liquidity,
+
+        (rl.amt0_usd + rl.amt1_usd - al.amt0_usd - al.amt1_usd) as profit,
+        (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd)-1 as profit_percent,
+
+        case 
+            --    add liquidity (x=0,y>0), remove liquidity (x>0, y=0)
+            -- or add liquidity (x>0,y=0), remove liquidity (x=0, y>0)
+            when al.amt0_float * rl.amt0_float =0 and al.amt1_float * rl.amt1_float =0 then 'complete_order'
+            -- add liquidity (x=0,y>0), remove liquidity (x=0, y>0)
+            when al.amt0_float + rl.amt0_float =0 and al.amt1_float * rl.amt1_float >0 then 'revoke_order'
+            -- add liquidity (x>0,y=0), remove liquidity (x>0, y=0)
+            when al.amt0_float * rl.amt0_float >0 and al.amt1_float + rl.amt1_float =0 then 'revoke_order'
+            -- add liquidity (x>0,y=0), remove liquidity (x>0, y>0)
+            when al.amt0_float * rl.amt0_float >0 and al.amt1_float * rl.amt1_float =0 then 'partial_order'
+            -- add liquidity (x=0,y>0), remove liquidity (x>0, y>0)
+            when al.amt0_float * rl.amt0_float =0 and al.amt1_float * rl.amt1_float >0 then 'partial_order'
+            when rl.amt0_float is null and rl.amt1_float is null then 'order_still_open'
+        end as order_status,
+
+        date_diff('hour',al.latest_addliq_time, rl.earliest_rmvliq_time) as elapsed_hours,
+        case 
+            when rl.liquidity = al.liquidity then 'rmv_all_liq'
+            when rl.liquidity < al.liquidity then 'rmv_partial_liq'
+            -- there must be a 'increase liquidity' txn out of the query time range
+            -- and it remove all combined liquidity this time
+            when rl.liquidity > al.liquidity then 'rmv_outofrange_liq' 
+        end as rmv_liq_type
+    from agg_add_liquidity al 
+    left join agg_remove_liquidity rl 
+        on al.tokenId = rl.tokenId 
+        and al.pair_symbol = rl.pair_symbol 
+        and rl.earliest_rmvliq_time > al.latest_addliq_time
+    where 
+        al.amt0_float = 0 or al.amt1_float = 0
 )
 
-select
-    al.tokenId,
-    al.symbol0,
-    al.symbol1,
-
-    al.amt0_float as add_float0,
-    al.amt0_usd as add_usd0,
-    al.amt1_float as add_float1,
-    al.amt1_usd as add_usd1,
-    al.liquidity as add_liquidity,
-
-    rl.amt0_float as rmv_float0,
-    rl.amt0_usd as rmv_usd0,
-    rl.amt1_float as rmv_float1,
-    rl.amt1_usd as rmv_usd1,
-    rl.liquidity as rmv_liquidity,
-
-    (rl.amt0_usd + rl.amt1_usd - al.amt0_usd - al.amt1_usd) as profit,
-    (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd)-1 as profit_percent,
-
-    case 
-        --    add liquidity (x=0,y>0), remove liquidity (x>0, y=0)
-        -- or add liquidity (x>0,y=0), remove liquidity (x=0, y>0)
-        when al.amt0_float * rl.amt0_float =0 and al.amt1_float * rl.amt1_float =0 then 'complete_order'
-        -- add liquidity (x=0,y>0), remove liquidity (x=0, y>0)
-        when al.amt0_float + rl.amt0_float =0 and al.amt1_float * rl.amt1_float >0 then 'revoke_order'
-        -- add liquidity (x>0,y=0), remove liquidity (x>0, y=0)
-        when al.amt0_float * rl.amt0_float >0 and al.amt1_float + rl.amt1_float =0 then 'revoke_order'
-        -- add liquidity (x>0,y=0), remove liquidity (x>0, y>0)
-        when al.amt0_float * rl.amt0_float >0 and al.amt1_float * rl.amt1_float =0 then 'partial_order'
-        -- add liquidity (x=0,y>0), remove liquidity (x>0, y>0)
-        when al.amt0_float * rl.amt0_float =0 and al.amt1_float * rl.amt1_float >0 then 'partial_order'
-        when rl.amt0_float is null and rl.amt1_float is null then 'order_still_open'
-    end as order_status,
-
-    date_diff('hour',al.latest_addliq_time, rl.earliest_rmvliq_time) as elapsed_hours,
-    case 
-        when rl.liquidity = al.liquidity then 'rmv_all_liq'
-        when rl.liquidity < al.liquidity then 'rmv_partial_liq'
-        -- there must be a 'increase liquidity' txn out of the query time range
-        -- and it remove all combined liquidity this time
-        when rl.liquidity > al.liquidity then 'rmv_outofrange_liq' 
-    end as rmv_liq_type
-from agg_add_liquidity al 
-left join agg_remove_liquidity rl 
-    on al.tokenId = rl.tokenId 
-    and al.pair_symbol = rl.pair_symbol 
-    and rl.earliest_rmvliq_time > al.latest_addliq_time
-where 
-    al.amt0_float = 0 or al.amt1_float = 0
+select 
+    order_status,
+    count(order_status) as count,
+    approx_percentile(profit_percent,0.5) as median_profit_percent,
+    approx_percentile(elapsed_hours,0.5) as median_elapsed_hours
+from limitorder_profit_status
+group by 1
