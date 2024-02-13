@@ -155,7 +155,8 @@ limitorder_profit_status as (
         rl.liquidity as rmv_liquidity,
 
         (rl.amt0_usd + rl.amt1_usd - al.amt0_usd - al.amt1_usd) as profit,
-        (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd)-1 as profit_percent,
+        -- +0.01 in case both al.amt0_usd + al.amt1_usd are zero
+        (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd + 0.01)-1 as profit_percent,
 
         case 
             --    add liquidity (x=0,y>0), remove liquidity (x>0, y=0)

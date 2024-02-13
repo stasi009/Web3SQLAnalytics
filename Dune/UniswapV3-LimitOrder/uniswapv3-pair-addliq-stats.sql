@@ -89,34 +89,41 @@ add_liquidity as (
 pair_add_liquidity_stats as (
     select 
         pair_symbol,
-        sum(total_usd) as Total_USD,
-        sum(case when lp_intention = 'Neutral' then total_usd else 0 end) as Neutral_USD,
-        sum(case when lp_intention = 'S0L1' then total_usd else 0 end) as S0L1_USD,
-        sum(case when lp_intention = 'S1L0' then total_usd else 0 end) as S1L0_USD
+        
+        sum(intention_usd) as Total_USD,
+        sum(case when lp_intention = 'Neutral' then intention_usd else 0 end) as Neutral_USD,
+        sum(case when lp_intention = 'S0L1' then intention_usd else 0 end) as S0L1_USD,
+        sum(case when lp_intention = 'S1L0' then intention_usd else 0 end) as S1L0_USD,
+
+        sum(num_txn) as Total_Txns,
+        sum(case when lp_intention = 'Neutral' then num_txn else 0 end) as Neutral_Txns,
+        sum(case when lp_intention = 'S0L1' then num_txn else 0 end) as S0L1_Txns,
+        sum(case when lp_intention = 'S1L0' then num_txn else 0 end) as S1L0_Txns
     from (
         select  
             pair_symbol,
             lp_intention,
-            sum(amt0_usd + amt1_usd) as total_usd
+            sum(amt0_usd + amt1_usd) as intention_usd,
+            count(tx_hash) as num_txn
         from add_liquidity
         group by 1,2
     )
         group by 1
 )
 
-select  
+select 
     pair_symbol,
-    lp_intention,
-    sum(amt0_usd + amt1_usd) as total_usd
-from add_liquidity
-group by 1,2
-
--- select 
---     pair_symbol,
---     Neutral_USD,
---     (Neutral_USD / Total_USD) as Neutral_Percent,
---     S0L1_USD,
---     (S0L1_USD / Total_USD) as S0L1_Percent,
---     S1L0_USD,
---     (S1L0_USD / Total_USD) as S1L0__Percent
--- from pair_add_liquidity_stats 
+    ------------------------- USD distribution
+    Neutral_USD,
+    S0L1_USD,
+    S1L0_USD,
+    (Neutral_USD / Total_USD) as Neutral_USD_Percent,
+    (S0L1_USD / Total_USD) as S0L1_USD_Percent,
+    (S1L0_USD / Total_USD) as S1L0__USD_Percent,
+    ------------------------- Num Txn distribution
+    Neutral_Txns,
+    S0L1_Txns,
+    S1L0_Txns
+from pair_add_liquidity_stats 
+where Total_USD >= 100000
+order by Total_USD desc
