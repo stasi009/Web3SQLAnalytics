@@ -32,6 +32,7 @@ with nft_tokens as (
         cm.*,
         tk0.symbol as symbol0,
         tk1.symbol as symbol1,
+        (tk0.symbol || '-' || tk1.symbol) as pair_symbol,
         coalesce(tk0.decimals,18) as tk0decimal,
         coalesce(tk1.decimals,18) as tk1decimal
     from call_mint cm
@@ -51,11 +52,11 @@ prices as (
     where blockchain = 'ethereum'
         and minute >= now() - interval '{{back_days}}' day
 ),
-add_liquidity as (
+add_single_liquidity as (
     select 
         il.evt_tx_hash as tx_hash
         , il.evt_block_time as block_time
-        , (nft.symbol0 || '-' || nft.symbol1) as pair_symbol
+        , nft.pair_symbol
         --------------------------------
         , nft.symbol0
         , (il.amount0 / power(10, nft.tk0decimal)) as amt0_float
@@ -78,8 +79,11 @@ add_liquidity as (
         and p1.minute = date_trunc('minute',il.evt_block_time)
     where 
         il.evt_block_time >= now() - interval '{{back_days}}' day
+        and 
+        -- there is some dirty data that both amounts are zero
+        ((il.amount0=0 and il.amount1>0) or (il.amount0>0 and il.amount1=0))
 ),
-agg_add_liquidity as (
+agg_add_single_liquidity as (
     select 
         tokenId,
         pair_symbol, 
@@ -91,14 +95,14 @@ agg_add_liquidity as (
         sum(amt1_float) as amt1_float,
         sum(amt1_usd) as amt1_usd,
         sum(liquidity) as liquidity
-    from add_liquidity
+    from add_single_liquidity
     group by 1,2,3,4
 ),
 remove_liquidity as (
     select 
         dl.evt_tx_hash as tx_hash,
         dl.evt_block_time as block_time,
-        (nft.symbol0 || '-' || nft.symbol1) as pair_symbol,
+        nft.pair_symbol,
         --------------------------------
         nft.symbol0,
         (dl.amount0 / power(10, nft.tk0decimal)) as amt0_float,
@@ -139,8 +143,7 @@ agg_remove_liquidity as (
 limitorder_profit_status as (
     select
         al.tokenId,
-        al.symbol0,
-        al.symbol1,
+        al.pair_symbol,
 
         al.amt0_float as add_float0,
         al.amt0_usd as add_usd0,
@@ -154,9 +157,8 @@ limitorder_profit_status as (
         rl.amt1_usd as rmv_usd1,
         rl.liquidity as rmv_liquidity,
 
-        (rl.amt0_usd + rl.amt1_usd - al.amt0_usd - al.amt1_usd) as profit,
-        -- +0.01 in case both al.amt0_usd + al.amt1_usd are zero
-        (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd + 0.01)-1 as profit_percent,
+        (rl.amt0_usd + rl.amt1_usd - al.amt0_usd - al.amt1_usd) as pnl,
+        (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd)-1 as pnl_percent,
 
         case 
             -- add liquidity (x=0,y>0), remove liquidity (x>0, y=0), or
@@ -181,19 +183,20 @@ limitorder_profit_status as (
             -- and it remove all combined liquidity this time
             when rl.liquidity > al.liquidity then 'rmv_outofrange_liq' 
         end as rmv_liq_type
-    from agg_add_liquidity al 
+    from agg_add_single_liquidity al 
     left join agg_remove_liquidity rl 
         on al.tokenId = rl.tokenId 
         and al.pair_symbol = rl.pair_symbol 
         and rl.earliest_rmvliq_time > al.latest_addliq_time
-    where 
-        al.amt0_float = 0 or al.amt1_float = 0
 )
 
 select 
-    order_status,
-    count(order_status) as count,
-    approx_percentile(profit_percent,0.5) as median_profit_percent,
-    approx_percentile(elapsed_hours,0.5) as median_elapsed_hours
+    pair_symbol,
+    count(1) as num_addliq,
+    avg(pnl) as avg_pnl,
+    approx_percentile(pnl,0.5) as median_pnl,
+    avg(pnl_percent) as avg_pnl_percent,
+    approx_percentile(pnl_percent,0.5) as median_pnl_percent
 from limitorder_profit_status
 group by 1
+order by num_addliq desc
