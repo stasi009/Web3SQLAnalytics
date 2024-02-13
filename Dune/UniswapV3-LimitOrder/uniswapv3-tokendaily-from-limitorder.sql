@@ -1,10 +1,4 @@
 
-/*
-! why use 'function call' table and parse the input parameters
-other than using uniswap_v3_ethereum.Pair_evt_Mint ??
-because Pair_evt_Mint doesn't have tokenId
-and Pair_evt_Mint's owner is always NftPositionManager, not the real owner I want
-*/
 with nft_tokens as (
     with call_mint as (
         select 
@@ -32,7 +26,7 @@ with nft_tokens as (
         cm.*,
         tk0.symbol as symbol0,
         tk1.symbol as symbol1,
-        (tk0.symbol || '-' || tk1.symbol) as pair_symbol
+        (tk0.symbol || '-' || tk1.symbol) as pair_symbol,
         coalesce(tk0.decimals,18) as tk0decimal,
         coalesce(tk1.decimals,18) as tk1decimal
     from call_mint cm
@@ -52,21 +46,19 @@ prices as (
     where blockchain = 'ethereum'
         and minute >= now() - interval '{{back_days}}' day
 ),
-add_liquidity as (
+add_single_liquidity as (-- add single side liquidity, equivalent as placing a limit order
     select 
-        il.evt_tx_hash as tx_hash
-        , il.evt_block_time as block_time
+        il.evt_block_time as block_time
+        -- either amount0 is zero or amount1 is zero
+        , (il.amount0 / power(10, nft.tk0decimal) * p0.price + il.amount1 / power(10, nft.tk1decimal) * p1.price) as amt_usd
         --------------------------------
-        , nft.symbol0
-        , (il.amount0 / power(10, nft.tk0decimal)) as amt0_float
-        , (il.amount0 / power(10, nft.tk0decimal) * p0.price) as amt0_usd
-        , nft.symbol1
-        , (il.amount1 / power(10, nft.tk1decimal)) as amt1_float
-        , (il.amount1 / power(10, nft.tk1decimal) * p1.price) as amt1_usd
-        --------------------------------        
+        , case when il.amount0>0 then nft.token0 else nft.token1 end as short_token
+        , case when il.amount0>0 then nft.symbol0 else nft.symbol1 end as short_symbol
+        , case when il.amount0=0 then nft.token0 else nft.token1 end as long_token
+        , case when il.amount0=0 then nft.symbol0 else nft.symbol1 end as long_symbol
+        --------------------------------
         , il.liquidity
         , il.tokenId
-        , nft.liquid_provider
     from uniswap_v3_ethereum.NonfungibleTokenPositionManager_evt_IncreaseLiquidity il
     inner join nft_tokens nft 
         on il.tokenId = nft.tokenId
@@ -78,122 +70,79 @@ add_liquidity as (
         and p1.minute = date_trunc('minute',il.evt_block_time)
     where 
         il.evt_block_time >= now() - interval '{{back_days}}' day
+        and 
+        -- there is some dirty data that both amounts are zero
+        ((il.amount0=0 and il.amount1>0) or (il.amount0>0 and il.amount1=0))
 ),
-agg_add_liquidity as (
+remove_all_liquidity as (
+    -- only care about removing all liquidity placed by limit order previously
+    -- this can limit the 'remove liquidity' order to only one previous 'add liquidity' order (most of the time)
+    -- not accurate, but simple
     select 
-        tokenId,
-        pair_symbol, 
-        symbol0,
-        symbol1,
-        max(block_time) as latest_addliq_time,
-        sum(amt0_float) as amt0_float,
-        sum(amt0_usd) as amt0_usd,
-        sum(amt1_float) as amt1_float,
-        sum(amt1_usd) as amt1_usd,
-        sum(liquidity) as liquidity
-    from add_liquidity
-    group by 1,2,3,4
-),
-remove_liquidity as (
-    select 
-        dl.evt_tx_hash as tx_hash,
         dl.evt_block_time as block_time,
-        (nft.symbol0 || '-' || nft.symbol1) as pair_symbol,
-        --------------------------------
-        nft.symbol0,
-        (dl.amount0 / power(10, nft.tk0decimal)) as amt0_float,
-        (dl.amount0 / power(10, nft.tk0decimal) * p0.price) as amt0_usd,
-        nft.symbol1,
-        (dl.amount1 / power(10, nft.tk1decimal)) as amt1_float,
-        (dl.amount1 / power(10, nft.tk1decimal) * p1.price) as amt1_usd,
-        --------------------------------
+        asl.short_symbol,
+        asl.short_token,
+        asl.long_symbol,
+        asl.long_token,
+        asl.amt_usd,
         dl.liquidity,
         dl.tokenId
     from uniswap_v3_ethereum.NonfungibleTokenPositionManager_evt_DecreaseLiquidity dl 
-    inner join nft_tokens nft 
-        on dl.tokenId = nft.tokenId
-    inner join prices p0
-        on p0.contract_address = nft.token0
-        and p0.minute = date_trunc('minute',dl.evt_block_time)
-    inner join prices p1
-        on p1.contract_address = nft.token1
-        and p1.minute = date_trunc('minute',dl.evt_block_time)
+    join add_single_liquidity asl 
+        on asl.tokenId = dl.tokenId
+        -- ! NOTE: limit to remove all liquidity, this often find exact one previous 'add liquidity' txn
+        -- not accurate, but simple
+        and asl.liquidity = dl.liquidity -- close all previous order, exclude partial close, for simplicity
+        and dl.evt_block_time > asl.block_time
     where 
         dl.evt_block_time >= now() - interval '{{back_days}}' day
 ),
-agg_remove_liquidity as (
+token_orders as (
     select 
-        tokenId,
-        pair_symbol, 
-        symbol0,
-        symbol1,
-        min(block_time) as earliest_rmvliq_time,
-        sum(amt0_float) as amt0_float,
-        sum(amt0_usd) as amt0_usd,
-        sum(amt1_float) as amt1_float,
-        sum(amt1_usd) as amt1_usd,
-        sum(liquidity) as liquidity
-    from remove_liquidity
-    group by 1,2,3,4
-),
-limitorder_profit_status as (
-    select
-        al.tokenId,
-        al.symbol0,
-        al.symbol1,
+        block_time,
+        short_token as token,
+        short_symbol as symbol,
+        amt_usd,
+        'SHORT' as order_type
+    from add_single_liquidity
 
-        al.amt0_float as add_float0,
-        al.amt0_usd as add_usd0,
-        al.amt1_float as add_float1,
-        al.amt1_usd as add_usd1,
-        al.liquidity as add_liquidity,
+    union all 
 
-        rl.amt0_float as rmv_float0,
-        rl.amt0_usd as rmv_usd0,
-        rl.amt1_float as rmv_float1,
-        rl.amt1_usd as rmv_usd1,
-        rl.liquidity as rmv_liquidity,
+    select 
+        block_time,
+        long_token as token,
+        long_symbol as symbol,
+        amt_usd,
+        'LONG' as order_type
+    from add_single_liquidity
 
-        (rl.amt0_usd + rl.amt1_usd - al.amt0_usd - al.amt1_usd) as profit,
-        -- +0.01 in case both al.amt0_usd + al.amt1_usd are zero
-        (rl.amt0_usd + rl.amt1_usd)/ (al.amt0_usd + al.amt1_usd + 0.01)-1 as profit_percent,
+    union all 
 
-        case 
-            -- add liquidity (x=0,y>0), remove liquidity (x>0, y=0), or
-            -- add liquidity (x>0,y=0), remove liquidity (x=0, y>0)
-            when al.amt0_float * rl.amt0_float =0 and al.amt1_float * rl.amt1_float =0 then 'complete_order'
-            -- add liquidity (x=0,y>0), remove liquidity (x=0, y>0)
-            when al.amt0_float + rl.amt0_float =0 and al.amt1_float * rl.amt1_float >0 then 'revoke_order'
-            -- add liquidity (x>0,y=0), remove liquidity (x>0, y=0)
-            when al.amt0_float * rl.amt0_float >0 and al.amt1_float + rl.amt1_float =0 then 'revoke_order'
-            -- add liquidity (x>0,y=0), remove liquidity (x>0, y>0)
-            when al.amt0_float * rl.amt0_float >0 and al.amt1_float * rl.amt1_float =0 then 'partial_order'
-            -- add liquidity (x=0,y>0), remove liquidity (x>0, y>0)
-            when al.amt0_float * rl.amt0_float =0 and al.amt1_float * rl.amt1_float >0 then 'partial_order'
-            when rl.amt0_float is null and rl.amt1_float is null then 'order_still_open'
-        end as order_status,
+    select 
+        block_time,
+        short_token as token,
+        short_symbol as symbol,
+        amt_usd,
+        'CLOSE_SHORT' as order_type
+    from remove_all_liquidity
 
-        date_diff('hour',al.latest_addliq_time, rl.earliest_rmvliq_time) as elapsed_hours,
-        case 
-            when rl.liquidity = al.liquidity then 'rmv_all_liq'
-            when rl.liquidity < al.liquidity then 'rmv_partial_liq'
-            -- there must be a 'increase liquidity' txn out of the query time range
-            -- and it remove all combined liquidity this time
-            when rl.liquidity > al.liquidity then 'rmv_outofrange_liq' 
-        end as rmv_liq_type
-    from agg_add_liquidity al 
-    left join agg_remove_liquidity rl 
-        on al.tokenId = rl.tokenId 
-        and al.pair_symbol = rl.pair_symbol 
-        and rl.earliest_rmvliq_time > al.latest_addliq_time
-    where 
-        al.amt0_float = 0 or al.amt1_float = 0
+    union all
+
+    select 
+        block_time,
+        long_token as token,
+        long_symbol as symbol,
+        amt_usd,
+        'CLOSE_LONG' as order_type
+    from remove_all_liquidity
 )
 
 select 
-    order_status,
-    count(order_status) as count,
-    approx_percentile(profit_percent,0.5) as median_profit_percent,
-    approx_percentile(elapsed_hours,0.5) as median_elapsed_hours
-from limitorder_profit_status
-group by 1
+    date_trunc('day',block_time) as day,
+    token,
+    symbol,
+    order_type,
+    sum(amt_usd) as daily_usd_amt
+from token_orders
+group by 1,2,3,4
+order by day
