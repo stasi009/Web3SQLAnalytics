@@ -36,6 +36,8 @@ with nft_tokens as (
     inner join tokens.erc20 tk1 
         on cm.token1 = tk1.contract_address
         and tk1.blockchain = 'ethereum'
+    where cm.token0 = {{token}}
+        or cm.token1 = {{token}}
 ),
 prices as (
     select 
@@ -102,7 +104,7 @@ token_orders as (
         block_time,
         short_token as token,
         short_symbol as symbol,
-        amt_usd,
+        -1*amt_usd as amt_usd,
         'SHORT' as order_type
     from add_single_liquidity
 
@@ -132,17 +134,48 @@ token_orders as (
         block_time,
         long_token as token,
         long_symbol as symbol,
-        amt_usd,
+        -1*amt_usd as amt_usd,
         'CLOSE_LONG' as order_type
     from remove_all_liquidity
+),
+daily_token_orders as (
+    select 
+        day, 
+        sum(case when order_type = 'SHORT' then daily_usd_amt else 0 end) as short_usd,
+        sum(case when order_type = 'LONG' then daily_usd_amt else 0 end) as long_usd,
+        sum(case when order_type = 'CLOSE_SHORT' then daily_usd_amt else 0 end) as close_short_usd,
+        sum(case when order_type = 'CLOSE_LONG' then daily_usd_amt else 0 end) as close_long_usd
+    from (
+        select 
+            date_trunc('day',block_time) as day,
+            token,
+            symbol,
+            order_type,
+            sum(amt_usd) as daily_usd_amt
+        from (
+            select * from token_orders
+            where token = {{token}}
+        )
+        group by 1,2,3,4
+    ) 
+    group by 1   
+),
+daily_price as (
+    select
+        date_trunc('day',minute) as day,
+        approx_percentile(price,0.5) as median_price
+    from (
+        select *
+        from prices
+        where contract_address = {{token}}
+    ) 
+    group by 1
 )
 
 select 
-    date_trunc('day',block_time) as day,
-    token,
-    symbol,
-    order_type,
-    sum(amt_usd) as daily_usd_amt
-from token_orders
-group by 1,2,3,4
-order by day
+    do.*,
+    dp.median_price
+from daily_token_orders do 
+join daily_price dp 
+on do.day = dp.day
+order by do.day
