@@ -83,21 +83,6 @@ add_single_liquidity as (
         -- there is some dirty data that both amounts are zero
         ((il.amount0=0 and il.amount1>0) or (il.amount0>0 and il.amount1=0))
 ),
-agg_add_single_liquidity as (
-    select 
-        tokenId,
-        pair_symbol, 
-        symbol0,
-        symbol1,
-        max(block_time) as latest_addliq_time,
-        sum(amt0_float) as amt0_float,
-        sum(amt0_usd) as amt0_usd,
-        sum(amt1_float) as amt1_float,
-        sum(amt1_usd) as amt1_usd,
-        sum(liquidity) as liquidity
-    from add_single_liquidity
-    group by 1,2,3,4
-),
 remove_liquidity as (
     select 
         dl.evt_tx_hash as tx_hash,
@@ -125,25 +110,12 @@ remove_liquidity as (
     where 
         dl.evt_block_time >= now() - interval '{{back_days}}' day
 ),
-agg_remove_liquidity as (
-    select 
-        tokenId,
-        pair_symbol, 
-        symbol0,
-        symbol1,
-        min(block_time) as earliest_rmvliq_time,
-        sum(amt0_float) as amt0_float,
-        sum(amt0_usd) as amt0_usd,
-        sum(amt1_float) as amt1_float,
-        sum(amt1_usd) as amt1_usd,
-        sum(liquidity) as liquidity
-    from remove_liquidity
-    group by 1,2,3,4
-),
 limitorder_profit_status as (
     select
         al.tokenId,
         al.pair_symbol,
+        al.block_time as addliq_time,
+        rl.block_time as rmvliq_time,
 
         al.amt0_float as add_float0,
         al.amt0_usd as add_usd0,
@@ -175,19 +147,23 @@ limitorder_profit_status as (
             when rl.amt0_float is null and rl.amt1_float is null then 'order_still_open'
         end as order_status,
 
-        date_diff('hour',al.latest_addliq_time, rl.earliest_rmvliq_time) as elapsed_hours,
-        case 
-            when rl.liquidity = al.liquidity then 'rmv_all_liq'
-            when rl.liquidity < al.liquidity then 'rmv_partial_liq'
-            -- there must be a 'increase liquidity' txn out of the query time range
-            -- and it remove all combined liquidity this time
-            when rl.liquidity > al.liquidity then 'rmv_outofrange_liq' 
-        end as rmv_liq_type
-    from agg_add_single_liquidity al 
-    left join agg_remove_liquidity rl 
+        date_diff('hour',al.block_time, rl.block_time) as elapsed_hours
+        -- case 
+        --     when rl.liquidity = al.liquidity then 'rmv_all_liq'
+        --     when rl.liquidity < al.liquidity then 'rmv_partial_liq'
+        --     -- there must be a 'increase liquidity' txn out of the query time range
+        --     -- and it remove all combined liquidity this time
+        --     when rl.liquidity > al.liquidity then 'rmv_outofrange_liq' 
+        -- end as rmv_liq_type
+    from add_single_liquidity al 
+    left join remove_liquidity rl 
         on al.tokenId = rl.tokenId 
         and al.pair_symbol = rl.pair_symbol 
-        and rl.earliest_rmvliq_time > al.latest_addliq_time
+        -- only care about removing all liquidity placed by limit order previously
+        -- this can limit the 'remove liquidity' order to only one previous 'add liquidity' order (most of the time)
+        -- not accurate, but simple
+        and al.liquidity = rl.liquidity 
+        and rl.block_time > al.block_time
 )
 
 select 
