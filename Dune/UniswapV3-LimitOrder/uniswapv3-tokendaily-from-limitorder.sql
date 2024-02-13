@@ -32,6 +32,7 @@ with nft_tokens as (
         cm.*,
         tk0.symbol as symbol0,
         tk1.symbol as symbol1,
+        (tk0.symbol || '-' || tk1.symbol) as pair_symbol
         coalesce(tk0.decimals,18) as tk0decimal,
         coalesce(tk1.decimals,18) as tk1decimal
     from call_mint cm
@@ -55,7 +56,6 @@ add_liquidity as (
     select 
         il.evt_tx_hash as tx_hash
         , il.evt_block_time as block_time
-        , (nft.symbol0 || '-' || nft.symbol1) as pair_symbol
         --------------------------------
         , nft.symbol0
         , (il.amount0 / power(10, nft.tk0decimal)) as amt0_float
