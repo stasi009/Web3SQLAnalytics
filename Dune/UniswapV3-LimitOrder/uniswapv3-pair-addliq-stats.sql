@@ -30,8 +30,10 @@ with nft_tokens as (
     )
     select 
         cm.*,
+        pc.pool,
         tk0.symbol as symbol0,
         tk1.symbol as symbol1,
+        (tk0.symbol || '-' || tk1.symbol || '-' || cast(pc.fee as varchar)) as pair_symbol,
         coalesce(tk0.decimals,18) as tk0decimal,
         coalesce(tk1.decimals,18) as tk1decimal
     from call_mint cm
@@ -41,6 +43,10 @@ with nft_tokens as (
     inner join tokens.erc20 tk1 
         on cm.token1 = tk1.contract_address
         and tk1.blockchain = 'ethereum'
+    inner join uniswap_v3_ethereum.Factory_evt_PoolCreated pc
+        on pc.token0 = cm.token0 
+        and pc.token1 = cm.token1
+        and pc.fee = cm.fee_int -- same token pair can have multiple fee tiers
 ),
 prices as (
     select 
@@ -55,7 +61,8 @@ add_liquidity as (
     select 
         il.evt_tx_hash as tx_hash
         , il.evt_block_time as block_time
-        , (nft.symbol0 || '-' || nft.symbol1) as pair_symbol
+        , nft.pool
+        , nft.pair_symbol
         --------------------------------
         , nft.symbol0
         , (il.amount0 / power(10, nft.tk0decimal)) as amt0_float
@@ -88,6 +95,7 @@ add_liquidity as (
 ),
 pair_add_liquidity_stats as (
     select 
+        pool,
         pair_symbol,
         
         sum(intention_usd) as Total_USD,
@@ -101,18 +109,19 @@ pair_add_liquidity_stats as (
         sum(case when lp_intention = 'S1L0' then num_txn else 0 end) as S1L0_Txns
     from (
         select  
+            pool,
             pair_symbol,
             lp_intention,
             sum(amt0_usd + amt1_usd) as intention_usd,
             count(tx_hash) as num_txn
         from add_liquidity
-        group by 1,2
+        group by 1,2,3
     )
-        group by 1
+        group by 1,2
 )
 
 select 
-    pair_symbol,
+    get_href(get_chain_explorer_address('ethereum', pool),pair_symbol) as token_pair,
     ------------------------- USD distribution
     Neutral_USD,
     S0L1_USD,
