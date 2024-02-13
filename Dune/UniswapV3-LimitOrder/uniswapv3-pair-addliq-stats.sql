@@ -33,7 +33,7 @@ with nft_tokens as (
         pc.pool,
         tk0.symbol as symbol0,
         tk1.symbol as symbol1,
-        (tk0.symbol || '-' || tk1.symbol || '-' || cast(pc.fee as varchar)) as pair_symbol,
+        (tk0.symbol || '-' || tk1.symbol) as pair_symbol,-- only care about two tokens, neglect fee difference
         coalesce(tk0.decimals,18) as tk0decimal,
         coalesce(tk1.decimals,18) as tk1decimal
     from call_mint cm
@@ -95,7 +95,8 @@ add_liquidity as (
 ),
 pair_add_liquidity_stats as (
     select 
-        pool,
+        -- xxx pool, 
+        -- only care about two tokens, ignore fee difference
         pair_symbol,
         
         sum(intention_usd) as Total_USD,
@@ -109,19 +110,19 @@ pair_add_liquidity_stats as (
         sum(case when lp_intention = 'S1L0' then num_txn else 0 end) as S1L0_Txns
     from (
         select  
-            pool,
+            -- xxx pool, only care about two tokens, ignore fee difference
             pair_symbol,
             lp_intention,
             sum(amt0_usd + amt1_usd) as intention_usd,
             count(tx_hash) as num_txn
         from add_liquidity
-        group by 1,2,3
-    )
         group by 1,2
+    )
+        group by 1 -- combine results from same token pair but different fee tiers
 )
 
 select 
-    get_href(get_chain_explorer_address('ethereum', pool),pair_symbol) as token_pair,
+    pair_symbol, -- combine results from same token pair but different fee tiers
     ------------------------- USD distribution
     Neutral_USD,
     S0L1_USD,
