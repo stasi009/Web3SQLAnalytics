@@ -167,12 +167,31 @@ limitorder_profit_status as (
 )
 
 select 
-    pair_symbol,
-    count(1) as num_addliq,
-    avg(pnl) as avg_pnl,
-    approx_percentile(pnl,0.5) as median_pnl,
-    avg(pnl_percent) as avg_pnl_percent,
-    approx_percentile(pnl_percent,0.5) as median_pnl_percent
-from limitorder_profit_status
+    liquid_provider,
+    sum(amt0_usd + amt1_usd) as total_limitorder_vol,
+    count(tx_hash) as total_limitorder_txn
+from add_single_liquidity
 group by 1
-order by num_addliq desc
+order by total_limitorder_vol desc
+
+
+-- select 
+--     pair_symbol,
+--     order_status,
+--     count(1) as num_session,
+--     approx_percentile(pnl_percent,0.5) as median_profit_percent,
+--     approx_percentile(elapsed_hours,0.5) as median_elapsed_hours
+-- from limitorder_profit_status
+-- group by 1,2
+-- order by num_session desc
+
+-- select 
+--     pair_symbol,
+--     count(1) as num_addliq,
+--     avg(pnl) as avg_pnl,
+--     approx_percentile(pnl,0.5) as median_pnl,
+--     avg(pnl_percent) as avg_pnl_percent,
+--     approx_percentile(pnl_percent,0.5) as median_pnl_percent
+-- from limitorder_profit_status
+-- group by 1
+-- order by num_addliq desc
