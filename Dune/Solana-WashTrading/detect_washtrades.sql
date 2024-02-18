@@ -2,7 +2,7 @@
 with latest_nft_trades as (
     select 
         block_time,
-        tx_id || '-'|| cast(outer_instruction_index as varchar) || '-' || cast(inner_instruction_index as varchar) as trade_tx_index,
+        tx_id || '-'|| cast(outer_instruction_index as varchar) || '-' || cast(COALESCE(inner_instruction_index,0) as varchar) as trade_tx_index,
 
         case 
             when account_mint is not null then 'mint_' || account_mint
