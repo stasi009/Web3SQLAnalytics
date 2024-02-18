@@ -42,11 +42,40 @@ back_forth_trade as (
         and t1.buyer = t2.seller
         and t1.seller = t2.buyer
     group by t1.trade_tx_index
+),
+
+buy_same_3x as (
+    select 
+        t1.trade_tx_index,
+        true as buy_same_3x
+    from latest_nft_trades t1 
+    inner join latest_nft_trades t2 
+        on t1.unique_nft_id = t2.unique_nft_id
+        and t1.buyer = t2.buyer
+        and t1.trade_tx_index is not null
+    group by t1.trade_tx_index
+    having count(t1.trade_tx_index) >= 3
+),
+
+sell_same_3x as (
+    select 
+        t1.trade_tx_index,
+        true as sell_same_3x
+    from latest_nft_trades t1 
+    inner join latest_nft_trades t2 
+        on t1.unique_nft_id = t2.unique_nft_id
+        and t1.seller = t2.seller
+        and t1.trade_tx_index is not null
+    group by t1.trade_tx_index
+    having count(t1.trade_tx_index) >= 3
 )
 
 select 
-    nt.*
-from latest_nft_trades nt
-inner join back_forth_trade bft
-    on bft.trade_tx_index = nt.trade_tx_index
-order by nt.unique_nft_id, nt.block_time
+    nt.buyer,
+    nt.unique_nft_id,
+    count(*) as count
+from buy_same_3x b3
+inner join latest_nft_trades nt
+    on nt.trade_tx_index = b3.trade_tx_index
+group by 1,2
+order by count desc
