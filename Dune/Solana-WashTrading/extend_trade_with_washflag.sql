@@ -15,6 +15,7 @@ with latest_nft_trades as (
             project,
             version,
 
+            trade_category,
             buyer,
             seller,
 
