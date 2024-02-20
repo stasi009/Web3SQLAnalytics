@@ -39,4 +39,5 @@ select
     temp.total_wash_maker_fee / temp.total_maker_fee as wash_makerfee_percent,
     temp.total_wash_royalty_fee / temp.total_royalty_fee as wash_royaltyfee_percent
 from group_stats_by_maker temp
+where total_volume >= 10000
 order by wash_vol_percent desc
