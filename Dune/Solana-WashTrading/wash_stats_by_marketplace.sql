@@ -1,7 +1,7 @@
 
 with group_stats_by_marketplace as (
     select 
-        marketplace,
+        project || '-' || version as marketplace,
 
         count(trade_tx_index) as total_num,
         sum(is_wash_trade) as total_wash_num,
@@ -17,12 +17,7 @@ with group_stats_by_marketplace as (
 
         sum(royalty_fee_amount_usd) as total_royalty_fee,
         sum(royalty_fee_amount_usd * is_wash_trade) as total_wash_royalty_fee
-    from (
-        select 
-            q.*,
-            q.project || '-' || q.version as marketplace
-        from query_3445248 q 
-    )  
+    from query_3445248 q 
     group by 1
 )
 
