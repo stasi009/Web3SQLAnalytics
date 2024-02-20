@@ -58,7 +58,9 @@ buy_same_3x as (
     from latest_nft_trades t1 
     inner join latest_nft_trades t2 
         on t1.unique_nft_id = t2.unique_nft_id
-        and t1.buyer = t2.buyer
+        and t1.buyer = t2.buyer 
+        and t1.trade_category = 'buy' -- active trader is buyer
+        and t2.trade_category = 'buy'
     group by t1.trade_tx_index
     having count(t1.trade_tx_index) >= 3
 ),
@@ -71,6 +73,8 @@ sell_same_3x as (
     inner join latest_nft_trades t2 
         on t1.unique_nft_id = t2.unique_nft_id
         and t1.seller = t2.seller
+        and t1.trade_category = 'sell' -- active trader is seller
+        and t2.trade_category = 'sell'
     group by t1.trade_tx_index
     having count(t1.trade_tx_index) >= 3
 )
