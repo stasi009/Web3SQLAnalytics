@@ -1,7 +1,7 @@
 
-with group_stats_by_maker as (
+with group_stats_by_trader as (
     select 
-        maker,
+        trader,
 
         count(trade_tx_index) as total_num,
         sum(is_wash_trade) as total_wash_num,
@@ -20,11 +20,9 @@ with group_stats_by_maker as (
     from (
         select 
             q.*,
-            case 
-                when trade_category = 'buy' then seller 
-                when trade_category = 'sell' then buyer 
-            end as maker
+            t.trader
         from query_3445248 q 
+        CROSS JOIN UNNEST(ARRAY[q.buyer, q.seller]) AS t(trader)
     )  
     group by 1
 )
@@ -38,6 +36,6 @@ select
     temp.total_wash_taker_fee / temp.total_taker_fee as wash_takerfee_percent,
     temp.total_wash_maker_fee / temp.total_maker_fee as wash_makerfee_percent,
     temp.total_wash_royalty_fee / temp.total_royalty_fee as wash_royaltyfee_percent
-from group_stats_by_maker temp
+from group_stats_by_trader temp
 where total_volume >= 10000
 order by wash_vol_percent desc
