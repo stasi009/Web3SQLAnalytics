@@ -12,6 +12,7 @@ select
     project,
     version,
 
+    tx_signer,
     trade_category,
     buyer,
     seller,
