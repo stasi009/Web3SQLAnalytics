@@ -57,29 +57,35 @@ with latest_nft_trades as (
 -- ),
 
 buy_same_manytimes as (
+    with buy_trades as (-- filter before join, reduce shuffle time
+        select *
+        from latest_nft_trades
+        where trade_category = 'buy'
+    )
     select 
         t1.trade_tx_index,
         true as buy_same_manytimes
-    from latest_nft_trades t1 
-    inner join latest_nft_trades t2 
+    from buy_trades t1 
+    inner join buy_trades t2 
         on t1.unique_nft_id = t2.unique_nft_id
-        and t1.buyer = t2.buyer 
-        and t1.trade_category = 'buy', -- active trader (tx_signer) is buyer
-        and t2.trade_category = 'buy'
+        and t1.buyer = t2.buyer -- active trader (tx_signer) is buyer
     group by t1.trade_tx_index
     having count(t1.trade_tx_index) >= {{trade_same_nft_max_times}}
 ),
 
 sell_same_manytimes as (
+    with sell_trades as (-- filter before join, reduce shuffle time
+        select *
+        from latest_nft_trades
+        where trade_category = 'sell'
+    )
     select 
         t1.trade_tx_index,
         true as sell_same_manytimes
-    from latest_nft_trades t1 
-    inner join latest_nft_trades t2 
+    from sell_trades t1 
+    inner join sell_trades t2 
         on t1.unique_nft_id = t2.unique_nft_id
-        and t1.seller = t2.seller
-        and t1.trade_category = 'sell' -- active trader (tx_signer) is seller
-        and t2.trade_category = 'sell'
+        and t1.seller = t2.seller -- active trader (tx_signer) is seller
     group by t1.trade_tx_index
     having count(t1.trade_tx_index) >= {{trade_same_nft_max_times}}
 )
