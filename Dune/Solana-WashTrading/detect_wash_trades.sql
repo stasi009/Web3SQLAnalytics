@@ -33,6 +33,7 @@ with latest_nft_trades as (
 ),
 
 -- ! NOTE: very rare, nearly impossible
+-- ! NOT join with this CTE to save some time
 -- same_buyer_seller as (
 --     select 
 --         trade_tx_index,
