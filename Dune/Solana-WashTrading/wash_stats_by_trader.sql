@@ -1,5 +1,21 @@
 
-with group_stats_by_trader as (
+with trader_trades as (
+    select 
+        q.*,
+        q.buyer as trader -- active trader
+    from query_3445248 q 
+    where q.trade_category = 'buy'
+
+    union all 
+
+    select 
+        q.*,
+        q.seller as trader -- active trader
+    from query_3445248 q 
+    where q.trade_category = 'sell'
+),
+
+group_stats_by_trader as (
     select 
         trader,
 
@@ -17,13 +33,7 @@ with group_stats_by_trader as (
 
         sum(royalty_fee_amount_usd) as total_royalty_fee,
         sum(royalty_fee_amount_usd * is_wash_trade) as total_wash_royalty_fee
-    from (
-        select 
-            q.*,
-            t.trader
-        from query_3445248 q 
-        CROSS JOIN UNNEST(ARRAY[q.buyer, q.seller]) AS t(trader)
-    )  
+    from trader_trades
     group by 1
 )
 
@@ -38,4 +48,4 @@ select
     temp.total_wash_royalty_fee / temp.total_royalty_fee as wash_royaltyfee_percent
 from group_stats_by_trader temp
 where total_volume >= 10000
-order by wash_vol_percent desc
+order by total_wash_volume desc
