@@ -26,6 +26,7 @@ with latest_nft_trades as (
         from nft_solana.trades
     ) temp
     where temp.block_time >= now() - interval '{{backdays}}' day
+        and date_trunc('day',temp.block_time) < current_date -- not include today's partial data
         and temp.trade_tx_index is not null
         and temp.unique_nft_id is not null
         and amount_usd >=1 -- limit dataset size
