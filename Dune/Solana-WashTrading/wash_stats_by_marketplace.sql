@@ -20,7 +20,7 @@ with group_stats_by_marketplace as (
     from (
         select 
             q.*,
-            q.project || '-' || cast(q.version as varchar) as marketplace
+            q.project || '-' || q.version as marketplace
         from query_3445248 q 
     )  
     group by 1

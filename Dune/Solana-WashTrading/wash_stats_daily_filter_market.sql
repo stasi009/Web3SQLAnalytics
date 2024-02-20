@@ -122,7 +122,7 @@ nft_trades_with_washflag as (
 )
 
 select 
-    date_trunc('day',q.block_time) as block_day,
+    date_trunc('day',block_time) as block_day,
     is_wash_trade,
 
     count(trade_tx_index) as total_num,
