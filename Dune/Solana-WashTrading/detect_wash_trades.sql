@@ -31,30 +31,37 @@ with latest_nft_trades as (
         and amount_usd >=1 -- limit dataset size
 ),
 
--- ! NOTE: impossible, because one of the seller/buyer is the dealer
--- ! in Maket Making mechanism, impossible to trade with himself
--- same_buyer_seller as (
---     select 
---         trade_tx_index,
---         true as same_buyer_seller
---     from latest_nft_trades t
---     where buyer = seller 
--- ),
+-- ! NOTE: very rare, nearly impossible
+same_buyer_seller as (
+    select 
+        trade_tx_index,
+        true as same_buyer_seller
+    from latest_nft_trades t
+    where buyer = seller 
+),
 
--- ! NOTE: because one of the seller/buyer is the dealer
--- ! so it's very normal for: A first buy from Dealer, and when price rises, A sell it back to Dealer
--- ! what's real abnormal is A does it many many times
--- back_forth_trade as (
---     select 
---         t1.trade_tx_index,
---         true as back_forth_trade
---     from latest_nft_trades t1
---     inner join latest_nft_trades t2
---         on t1.unique_nft_id = t2.unique_nft_id
---         and t1.buyer = t2.seller
---         and t1.seller = t2.buyer
---     group by t1.trade_tx_index
--- ),
+-- ! NOTE: must add t1.trade_category = t2.trade_category
+-- if A first sell it to B, which is a 'sell' trade
+-- and then A buy it back from B, which is a 'buy' trade
+-- in both trades, A is active trader (i.e., tx signer), 
+-- sometimes it's normal, maybe A find some opportunity, and B is a professional dealer, whose job is just accepting all orders
+-- what's making such cases abnormal is when A does it many times, which will be handled by CTE 'buy_same_manytimes' and 'sell_same_manytimes'
+
+-- if A first sell it to B (A is the active trader, i.e., tx_signer), which is a 'sell' trade
+-- and then B sell it to A (B is the active trader, i.e., tx_signer), which is a 'sell' trade
+-- the reason A is willing to reverse his position passively in 2nd trading, is highly because A and B belongs to same person
+back_forth_trade as (
+    select 
+        t1.trade_tx_index,
+        true as back_forth_trade
+    from latest_nft_trades t1
+    inner join latest_nft_trades t2
+        on t1.unique_nft_id = t2.unique_nft_id
+        and t1.buyer = t2.seller
+        and t1.seller = t2.buyer
+        and t1.trade_category = t2.trade_category
+    group by t1.trade_tx_index
+),
 
 buy_same_manytimes as (
     with buy_trades as (-- filter before join, reduce shuffle time
@@ -92,12 +99,21 @@ sell_same_manytimes as (
 
 select 
     lnt.*,
-    cast(
-        -- if one is true, even the other is null, 'or' still return true
-        -- ! NOTE: true or null return true, false or null return null
-        COALESCE(bsm.buy_same_manytimes or ssm.sell_same_manytimes, false) 
-    as int) as is_wash_trade 
+    cast(COALESCE(sbs.same_buyer_seller,false) as int) as same_buyer_seller,
+    cast(COALESCE(bft.back_forth_trade, false) as int) as back_forth_trade,
+    cast(COALESCE(bsm.buy_same_manytimes,false) as int) as buy_same_manytimes,
+    cast(COALESCE(ssm.sell_same_manytimes,false) as int) as sell_same_manytimes,
+    -- if one is true, even the other is null, 'or' still return true
+    -- ! NOTE: true or null return true, false or null return null
+    cast(COALESCE(sbs.same_buyer_seller
+            or bft.back_forth_trade
+            or bsm.buy_same_manytimes
+            or ssm.sell_same_manytimes, false) as int) as is_wash_trade 
 from latest_nft_trades lnt 
+left join same_buyer_seller sbs 
+    on sbs.trade_tx_index = lnt.trade_tx_index
+left join back_forth_trade bft 
+    on bft.trade_tx_index = lnt.trade_tx_index
 left join buy_same_manytimes bsm
     on bsm.trade_tx_index = lnt.trade_tx_index
 left join sell_same_manytimes ssm
