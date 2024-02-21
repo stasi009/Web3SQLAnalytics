@@ -99,28 +99,6 @@ sell_same_manytimes as (
     having count(t1.trade_tx_index) >= {{trade_same_nft_max_times}}
 )
 
--- select 
---     lnt.*,
---     cast(COALESCE(sbs.same_buyer_seller,false) as int) as same_buyer_seller,
---     cast(COALESCE(bft.back_forth_trade, false) as int) as back_forth_trade,
---     cast(COALESCE(bsm.buy_same_manytimes,false) as int) as buy_same_manytimes,
---     cast(COALESCE(ssm.sell_same_manytimes,false) as int) as sell_same_manytimes,
---     -- if one is true, even the other is null, 'or' still return true
---     -- ! NOTE: true or null return true, false or null return null
---     cast(COALESCE(sbs.same_buyer_seller
---             or bft.back_forth_trade
---             or bsm.buy_same_manytimes
---             or ssm.sell_same_manytimes, false) as int) as is_wash_trade 
--- from latest_nft_trades lnt 
--- left join same_buyer_seller sbs 
---     on sbs.trade_tx_index = lnt.trade_tx_index
--- left join back_forth_trade bft 
---     on bft.trade_tx_index = lnt.trade_tx_index
--- left join buy_same_manytimes bsm
---     on bsm.trade_tx_index = lnt.trade_tx_index
--- left join sell_same_manytimes ssm
---     on ssm.trade_tx_index = lnt.trade_tx_index
-
 select 
     lnt.*,
     cast(COALESCE(bft.back_forth_trade, false) as int) as back_forth_trade,

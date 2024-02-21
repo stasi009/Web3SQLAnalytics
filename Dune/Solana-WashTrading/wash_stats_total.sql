@@ -1,4 +1,3 @@
-
 select 
     temp.*,
     cast(temp.total_wash_num as double) / temp.total_num as wash_num_percent,
