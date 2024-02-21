@@ -159,3 +159,9 @@ select
     temp.wash_royalty_fee / temp.royalty_fee as wash_royaltyfee_percent
 from group_stats_by_day temp
 order by block_day
+
+
+-- select * from "query_3449073(backdays='90',market='magiceden',market_version='mmm')"
+-- select * from "query_3449073(backdays='90',market='magiceden',market_version='v2')"
+-- select * from "query_3449073(backdays='90',market='tensorswap',market_version='v1')"
+-- select * from "query_3449073(backdays='90',market='tensorswap',market_version='v2')"

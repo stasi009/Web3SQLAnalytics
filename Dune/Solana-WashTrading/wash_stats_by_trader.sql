@@ -11,7 +11,7 @@ with trader_trades as (
     select 
         q.*,
         q.seller as trader -- active trader
-    from query_3445248 q 
+    from "query_3445248(backdays='90')" q 
     where q.trade_category = 'sell'
 ),
 
@@ -47,5 +47,5 @@ select
     temp.total_wash_maker_fee / temp.total_maker_fee as wash_makerfee_percent,
     temp.total_wash_royalty_fee / temp.total_royalty_fee as wash_royaltyfee_percent
 from group_stats_by_trader temp
-where total_volume >= 10000
-order by total_wash_volume desc
+where total_volume >= 300000
+order by total_wash_volume desc, wash_vol_percent desc
