@@ -1,22 +1,3 @@
--- with create_nft as (
---     SELECT 
---         call_tx_id,
---         call_block_time,
---         case 
---             when account_mint is not null then 'mint_' || account_mint
---             when account_merkle_tree is not null then 'merkle_' || account_merkle_tree || '_' ||cast(leaf_id as varchar)
---         end as unique_nft_id,
---         COALESCE(collection_mint, verified_creator) as collection_or_creator, --collection is best, verified_creator is second best
---         version,
---         token_symbol,
---         trim(split(token_name,'#')[1]) as token_name
---     FROM tokens_solana.nft
---     --if it is null then we don't want it
---     WHERE COALESCE(collection_mint, verified_creator) is not null 
---         and token_symbol is not null
---         and token_name is not null
--- ),
-
 with group_wash_by_nft as (
     select 
         unique_nft_id,
@@ -35,32 +16,57 @@ with group_wash_by_nft as (
 
         sum(royalty_fee_amount_usd) as total_royalty_fee,
         sum(royalty_fee_amount_usd * is_wash_trade) as total_wash_royalty_fee
-    from query_3445248 q 
+    from "query_3445248(backdays='90')" q 
     group by 1
     order by total_wash_volume desc
     limit 100
 ),
 
+create_nft as (
+    SELECT 
+        call_tx_id,
+        call_block_time,
+        case 
+            when account_mint is not null then 'mint_' || account_mint
+            when account_merkle_tree is not null then 'merkle_' || account_merkle_tree || '_' ||cast(leaf_id as varchar)
+        end as unique_nft_id,
+        COALESCE(collection_mint, verified_creator) as collection_or_creator, --collection is best, verified_creator is second best
+        version,
+        token_symbol,
+        -- trim(split(token_name,'#')[1]) as token_name
+        token_name
+    FROM tokens_solana.nft
+    --if it is null then we don't want it
+    WHERE COALESCE(collection_mint, verified_creator) is not null 
+        and token_symbol is not null
+        and token_name is not null
+),
+
 nft_with_link as (
     select 
-        case when nft_infos[1] = 'mint' 
-            then get_href(get_chain_explorer_address('solana', nft_infos[2] ),'mint_account') 
-        end as mint_account,
-        case when nft_infos[1] = 'merkle' 
-            then get_href(get_chain_explorer_address('solana', nft_infos[2] ),'merkle_leaf' || nft_infos[3]) 
-        end as merkle_tree_leaf,
+        case 
+            when nft_infos[1] = 'mint' 
+                then get_href(get_chain_explorer_address('solana', nft_infos[2] ),token_name) 
+            when nft_infos[1] = 'merkle' 
+                then get_href(get_chain_explorer_address('solana', collection_or_creator ),token_name) 
+        end as link,
         tmp.*
     from (
         select 
-            n.*,
-            split(unique_nft_id,'_') as nft_infos
-        from group_wash_by_nft n
+            gn.*,
+            ct.token_name,
+            ct.collection_or_creator,
+            ct.version as nft_standard,
+            split(gn.unique_nft_id,'_') as nft_infos
+        from group_wash_by_nft gn
+        inner join create_nft ct 
+            on ct.unique_nft_id = gn.unique_nft_id
     ) tmp
 )
 
 select 
-    t.mint_account,
-    t.merkle_tree_leaf,
+    t.link,
+    t.nft_standard,
 
     t.total_num,
     t.total_wash_num,
