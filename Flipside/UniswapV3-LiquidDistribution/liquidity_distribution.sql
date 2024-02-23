@@ -48,14 +48,42 @@ range_net_liquidity as (
     group by 1,2,3
     having sum(delta_liquidity) > 0
 ),
+
 tick_net_liquidity as (
     select  
         ticks.value as tick,
-        sum(range_liq) as tick_net_liq
+        sum(range_liq) as liquidity
     from range_net_liquidity as rl, 
         lateral flatten(input => ARRAY_GENERATE_RANGE(tick_lower,tick_upper,tick_spacing)) as ticks
     group by 1
+),
+
+latest_swap as (
+    select 
+        tick, -- tick after swap
+        liquidity, -- liquidity after swap,
+        'SW' as flag -- used in plot chart
+        -- price_1_0 as price0_in1, -- amount of token1 per token0 that the swap, price0 calc in token1
+        -- price_0_1 as price1_in0, -- amount of token0 per token1 that the swap, price1 calc in token0
+        -- token0_price as price0_usd, -- token0 price in usd
+        -- token1_price as price1_usd  -- token1 price in usd
+    from ETHEREUM.uniswapv3.ez_swaps
+    where block_timestamp >= current_date
+        and pool_address = lower('{{pool_address}}')
+    order by block_timestamp desc 
+    limit 1
+),
+
+swap_neighbor_liquidity as (
+    select 
+        tl.tick,
+        tl.liquidity,
+        'LP' as flag
+    from tick_net_liquidity tl
+    cross join latest_swap sw
+    where tl.tick between sw.tick - 10000 and sw.tick + 10000
 )
 
-select * from tick_net_liquidity
-order by tick 
+select * from swap_neighbor_liquidity
+union all
+select * from latest_swap
