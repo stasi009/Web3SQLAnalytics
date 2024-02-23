@@ -44,6 +44,7 @@ create_nft as (
 
 nft_with_link as (
     select 
+        case  when nft_infos[1] = 'mint' then nft_infos[2] end as account_mint,
         case 
             when nft_infos[1] = 'mint' 
                 then get_href(get_chain_explorer_address('solana', nft_infos[2] ),token_name) 
@@ -66,6 +67,7 @@ nft_with_link as (
 
 select 
     t.link,
+    t.account_mint,
     t.nft_standard,
 
     t.total_num,
