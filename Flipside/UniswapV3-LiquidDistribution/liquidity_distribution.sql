@@ -69,6 +69,8 @@ latest_swap as (
     from ETHEREUM.uniswapv3.ez_swaps
     where block_timestamp >= current_date - interval '1 week'
         and pool_address = lower('{{pool_address}}')
+        and token0_price is not null -- the table has some dirty data
+        and token1_price is not null -- the table has some dirty data
     order by block_timestamp desc 
     limit 1
 ),
