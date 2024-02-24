@@ -165,34 +165,37 @@ zeropoint_cumsum_usdliq as (
     where price0_to_now_ratio <=1
     order by price0_to_now_ratio desc 
     limit 1
+),
+
+with lp_distribution_with_pressure as (
+    select 
+        lpd.tick, -- tick range [tick, next_tick)
+        lpd.price0_in1,
+        lpd.price1_in0,
+        lpd.liquidity,
+        'LP' as flag, -- used in plotting chart
+
+        lpd.price0_to_now_ratio,
+        lpd.price0_to_now_delta_ratio,
+        lpd.price1_to_now_ratio,
+        lpd.price1_to_now_delta_ratio,
+
+        lpd.token0_amt_adjdec,
+        lpd.token1_amt_adjdec,
+        
+        case 
+            when cumsum_usd_liq <= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick < now_tick
+            else 0
+        end as sell_token0_pressure_usd, 
+
+        case 
+            when cumsum_usd_liq >= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick > now_tick
+            else 0
+        end as buy_token0_pressure_usd
+    from lp_distribution_with_cumsum_liq lpd 
+    cross join zeropoint_cumsum_usdliq zero
 )
 
-select 
-    lpd.tick, -- tick range [tick, next_tick)
-    lpd.price0_in1,
-    lpd.price1_in0,
-    lpd.liquidity,
-    'LP' as flag, -- used in plotting chart
-
-    lpd.price0_to_now_ratio,
-    lpd.price0_to_now_delta_ratio,
-    lpd.price1_to_now_ratio,
-    lpd.price1_to_now_delta_ratio,
-
-    lpd.token0_amt_adjdec,
-    lpd.token1_amt_adjdec,
-    
-    case 
-        when cumsum_usd_liq <= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick < now_tick
-        else 0
-    end as sell_token0_pressure_usd, 
-
-    case 
-        when cumsum_usd_liq >= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick > now_tick
-        else 0
-    end as buy_token0_pressure_usd
-from lp_distribution_with_cumsum_liq lpd 
-cross join zeropoint_cumsum_usdliq zero
 
 union all 
 
