@@ -167,7 +167,7 @@ zeropoint_cumsum_usdliq as (
     limit 1
 ),
 
-with lp_distribution_with_pressure as (
+lp_distribution_with_pressure as (
     select 
         lpd.tick, -- tick range [tick, next_tick)
         lpd.price0_in1,
@@ -196,6 +196,11 @@ with lp_distribution_with_pressure as (
     cross join zeropoint_cumsum_usdliq zero
 )
 
+select 
+    *,
+    -1*sell_token0_pressure_usd as buy_token1_pressure_usd, -- become positive
+    -1*buy_token0_pressure_usd as sell_token1_pressure_usd -- become negative
+from lp_distribution_with_pressure
 
 union all 
 
@@ -214,5 +219,7 @@ select
     null as token0_amt_adjdec,
     null as token1_amt_adjdec,
     null as sell_token0_pressure_usd, 
-    null as buy_token0_pressure_usd
+    null as buy_token0_pressure_usd,
+    null as buy_token1_pressure_usd, 
+    null as sell_token1_pressure_usd 
 from latest_swap
