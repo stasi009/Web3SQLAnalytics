@@ -135,7 +135,7 @@ swap_neighbor_lp_temp2 as (
         end as token1_amt_adjdec -- adjdec: decimals adjusted
 
     from swap_neighbor_lp_temp1
-    where price0_in1 between now_price0_in1 * 0.5 and now_price0_in1 * 1.5
+    where price0_in1 between now_price0_in1 * (1-{{price_delta_ratio}}) and now_price0_in1 * (1+{{price_delta_ratio}})
 ),
 
 lp_distribution_with_cumsum_liq as (
