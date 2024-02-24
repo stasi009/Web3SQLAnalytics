@@ -87,6 +87,7 @@ swap_neighbor_lp_temp1 as (
         tl.liquidity,
 
         sw.tick as now_tick, 
+        sw.liquidity as now_liquidity,
         power(1.0001, sw.tick / 2) as now_sqrtp, -- sqrt price after swap
 
         sw.price0_in1 as now_price0_in1, 
@@ -111,6 +112,7 @@ swap_neighbor_lp_temp2 as (
         price0_in1 / now_price0_in1 as price0_to_now_ratio,
         1/ price0_in1 / now_price1_in0 as price1_to_now_ratio,
 
+        now_tick,
         now_price0_usd, 
         now_price1_usd,
 
@@ -134,23 +136,59 @@ swap_neighbor_lp_temp2 as (
 
     from swap_neighbor_lp_temp1
     where price0_in1 between now_price0_in1 * 0.5 and now_price0_in1 * 1.5
+),
+
+lp_distribution_with_cumsum_liq as (
+    select 
+        tick, -- tick range [tick, next_tick)
+        price0_in1,
+        1/ price0_in1 as price1_in0,
+        liquidity,
+
+        price0_to_now_ratio,
+        price0_to_now_ratio-1 as price0_to_now_delta_ratio,
+        price1_to_now_ratio,
+        price1_to_now_ratio-1 as price1_to_now_delta_ratio,
+
+        token0_amt_adjdec,
+        token1_amt_adjdec,
+        (token0_amt_adjdec * now_price0_usd + token1_amt_adjdec * now_price1_usd) as usd_liquidity,
+        sum(token0_amt_adjdec * now_price0_usd + token1_amt_adjdec * now_price1_usd) over (order by tick) as cumsum_usd_liq
+
+    from swap_neighbor_lp_temp2
+    order by tick
+),
+
+zeropoint_cumsum_usdliq as (
+    select cumsum_usd_liq as zeropnt_cumsum_usdliq
+    from lp_distribution_with_cumsum_liq
+    where price0_to_now_ratio <=1
+    order by price0_to_now_ratio desc 
+    limit 1
 )
 
-
 select 
-    tick, -- tick range [tick, next_tick)
-    price0_in1,
-    1/ price0_in1 as price1_in0,
-    liquidity,
+    lpd.tick, -- tick range [tick, next_tick)
+    lpd.price0_in1,
+    lpd.price1_in0,
+    lpd.liquidity,
 
-    price0_to_now_ratio,
-    price0_to_now_ratio-1 as price0_to_now_delta_ratio,
-    price1_to_now_ratio,
-    price1_to_now_ratio-1 as price1_to_now_delta_ratio,
+    lpd.price0_to_now_ratio,
+    lpd.price0_to_now_delta_ratio,
+    lpd.price1_to_now_ratio,
+    lpd.price1_to_now_delta_ratio,
 
-    token0_amt_adjdec,
-    token1_amt_adjdec,
-    (token0_amt_adjdec * now_price0_usd + token1_amt_adjdec * now_price1_usd) as liquidity_usd
+    lpd.token0_amt_adjdec,
+    lpd.token1_amt_adjdec,
+    
+    case 
+        when cumsum_usd_liq <= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick < now_tick
+        else 0
+    end as sell_token0_pressure_usd, 
 
-from swap_neighbor_lp_temp2
-order by tick
+    case 
+        when cumsum_usd_liq >= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick > now_tick
+        else 0
+    end as buy_token0_ressure_usd
+from lp_distribution_with_cumsum_liq lpd 
+cross join zeropoint_cumsum_usdliq zero
