@@ -87,7 +87,7 @@ swap_neighbor_lp_temp1 as (
         tl.liquidity,
 
         sw.tick as swap_tick,
-        power(1.0001, sw.tick / 2) as swap_sqrtp, -- sqrt price after swap
+        power(1.0001, sw.tick / 2) as now_sqrtp, -- sqrt price after swap
 
         sw.price0_in1 as swap_price0_in1, 
         sw.price1_in0 as swap_price1_in0, 
@@ -114,7 +114,7 @@ swap_neighbor_lp_temp2 as (
         case 
             when swap_tick < tick then liquidity * (high_sqrtp - low_sqrtp) / (high_sqrtp * low_sqrtp * power(10, token0_decimals)) 
             -- between include both ends
-            when swap_tick between tick and next_tick then liquidity * (high_sqrtp - swap_sqrtp) / (high_sqrtp * swap_sqrtp * power(10, token0_decimals)) 
+            when swap_tick between tick and next_tick then liquidity * (high_sqrtp - now_sqrtp) / (high_sqrtp * now_sqrtp * power(10, token0_decimals)) 
             when swap_tick > next_tick then 0
         end as token0_amt_adjdec, -- adjdec: decimals adjusted
 
@@ -123,7 +123,7 @@ swap_neighbor_lp_temp2 as (
         case 
             when swap_tick < tick then 0
             -- between include both ends
-            when swap_tick between tick and next_tick then liquidity * (swap_sqrtp - low_sqrtp) / power(10, token1_decimals)
+            when swap_tick between tick and next_tick then liquidity * (now_sqrtp - low_sqrtp) / power(10, token1_decimals)
             when swap_tick > next_tick then liquidity * (high_sqrtp - low_sqrtp) / power(10, token1_decimals)
         end as token1_amt_adjdec -- adjdec: decimals adjusted
 
