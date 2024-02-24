@@ -1,4 +1,3 @@
-
 with pool_info as (
     select 
         pool_address,
@@ -157,68 +156,3 @@ lp_distribution_with_cumsum_liq as (
     from swap_neighbor_lp_temp2
     order by tick
 ),
-
-zeropoint_cumsum_usdliq as (
-    select cumsum_usd_liq as zeropnt_cumsum_usdliq
-    from lp_distribution_with_cumsum_liq
-    where price0_to_now_ratio <=1
-    order by price0_to_now_ratio desc 
-    limit 1
-),
-
-lp_distribution_with_pressure as (
-    select 
-        lpd.tick, -- tick range [tick, next_tick)
-        lpd.price0_in1,
-        lpd.price1_in0,
-        lpd.liquidity,
-        'LP' as flag, -- used in plotting chart
-
-        lpd.price0_to_now_ratio,
-        lpd.price0_to_now_delta_ratio,
-        lpd.price1_to_now_ratio,
-        lpd.price1_to_now_delta_ratio,
-
-        lpd.token0_amt_adjdec,
-        lpd.token1_amt_adjdec,
-        
-        case 
-            when cumsum_usd_liq <= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick < now_tick
-            else 0
-        end as sell_token0_pressure_usd, 
-
-        case 
-            when cumsum_usd_liq >= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick > now_tick
-            else 0
-        end as buy_token0_pressure_usd
-    from lp_distribution_with_cumsum_liq lpd 
-    cross join zeropoint_cumsum_usdliq zero
-)
-
-select 
-    *,
-    -1*sell_token0_pressure_usd as buy_token1_pressure_usd, -- become positive
-    -1*buy_token0_pressure_usd as sell_token1_pressure_usd -- become negative
-from lp_distribution_with_pressure
-
-union all 
-
-select 
-    tick,
-    price0_in1,
-    price1_in0,
-    liquidity,
-    'SWAP' as flag, -- used in plotting chart
-
-    1 as price0_to_now_ratio,
-    0 as price0_to_now_delta_ratio,
-    1 as price1_to_now_ratio,
-    0 as price1_to_now_delta_ratio,
-
-    null as token0_amt_adjdec,
-    null as token1_amt_adjdec,
-    null as sell_token0_pressure_usd, 
-    null as buy_token0_pressure_usd,
-    null as buy_token1_pressure_usd, 
-    null as sell_token1_pressure_usd 
-from latest_swap
