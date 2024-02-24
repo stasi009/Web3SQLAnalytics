@@ -190,7 +190,7 @@ select
     case 
         when cumsum_usd_liq >= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick > now_tick
         else 0
-    end as buy_token0_ressure_usd
+    end as buy_token0_pressure_usd
 from lp_distribution_with_cumsum_liq lpd 
 cross join zeropoint_cumsum_usdliq zero
 
@@ -211,5 +211,5 @@ select
     null as token0_amt_adjdec,
     null as token1_amt_adjdec,
     null as sell_token0_pressure_usd, 
-    null as buy_token0_ressure_usd
+    null as buy_token0_pressure_usd
 from latest_swap
