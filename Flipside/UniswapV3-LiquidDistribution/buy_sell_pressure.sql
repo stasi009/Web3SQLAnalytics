@@ -145,9 +145,7 @@ lp_distribution_with_cumsum_liq as (
         liquidity,
 
         price0_to_now_ratio,
-        price0_to_now_ratio-1 as price0_to_now_delta_ratio,
         price1_to_now_ratio,
-        price1_to_now_ratio-1 as price1_to_now_delta_ratio,
 
         token0_amt_adjdec,
         token1_amt_adjdec,
@@ -168,57 +166,54 @@ zeropoint_cumsum_usdliq as (
 
 lp_distribution_with_pressure as (
     select 
-        lpd.tick, -- tick range [tick, next_tick)
-        lpd.price0_in1,
-        lpd.price1_in0,
-        lpd.liquidity,
-        'LP' as flag, -- used in plotting chart
+        *,
+        -1*sell_token0_pressure_usd as buy_token1_pressure_usd, -- become positive
+        -1*buy_token0_pressure_usd as sell_token1_pressure_usd -- become negative
+    from (
+        select 
+            lpd.tick, -- tick range [tick, next_tick)
+            lpd.price0_in1,
+            lpd.price1_in0,
+            lpd.liquidity,
+            'LP' as flag, -- used in plotting chart
 
-        lpd.price0_to_now_ratio,
-        lpd.price0_to_now_delta_ratio,
-        lpd.price1_to_now_ratio,
-        lpd.price1_to_now_delta_ratio,
+            abs(floor((lpd.price0_to_now_ratio-1) * 100)) as price0_abs_delta_percent,
+            abs(floor((lpd.price1_to_now_ratio-1) * 100)) as price1_abs_delta_percent,
 
-        lpd.token0_amt_adjdec,
-        lpd.token1_amt_adjdec,
-        
-        case 
-            when cumsum_usd_liq <= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick < now_tick
-            else 0
-        end as sell_token0_pressure_usd, 
+            lpd.token0_amt_adjdec,
+            lpd.token1_amt_adjdec,
+            
+            case 
+                when cumsum_usd_liq <= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick < now_tick
+                else 0
+            end as sell_token0_pressure_usd, 
 
-        case 
-            when cumsum_usd_liq >= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick > now_tick
-            else 0
-        end as buy_token0_pressure_usd
-    from lp_distribution_with_cumsum_liq lpd 
-    cross join zeropoint_cumsum_usdliq zero
+            case 
+                when cumsum_usd_liq >= zeropnt_cumsum_usdliq then cumsum_usd_liq - zeropnt_cumsum_usdliq -- tick > now_tick
+                else 0
+            end as buy_token0_pressure_usd
+        from lp_distribution_with_cumsum_liq lpd 
+        cross join zeropoint_cumsum_usdliq zero
+    )
 )
 
 select 
-    *,
-    -1*sell_token0_pressure_usd as buy_token1_pressure_usd, -- become positive
-    -1*buy_token0_pressure_usd as sell_token1_pressure_usd -- become negative
-from lp_distribution_with_pressure
-
-union all 
-
-select 
-    tick,
-    price0_in1,
-    price1_in0,
-    liquidity,
-    'SWAP' as flag, -- used in plotting chart
-
-    1 as price0_to_now_ratio,
-    0 as price0_to_now_delta_ratio,
-    1 as price1_to_now_ratio,
-    0 as price1_to_now_delta_ratio,
-
-    null as token0_amt_adjdec,
-    null as token1_amt_adjdec,
-    null as sell_token0_pressure_usd, 
-    null as buy_token0_pressure_usd,
-    null as buy_token1_pressure_usd, 
-    null as sell_token1_pressure_usd 
-from latest_swap
+    price0_abs_delta_percent,
+    sell_token0_pressure_usd,
+    buy_token0_pressure_usd,
+    -- if sell pressure is higher than buy pressure, encourage to buy, long is strong
+    -1*sell_token0_pressure_usd / buy_token0_pressure_usd as long_token0_strength
+from (
+    select 
+        price0_abs_delta_percent,
+        -- since group by abs change percent, there is some sell_token0_pressure_usd=0 from buy pressure side
+        -- ! NOTE: snowflake doesn't support filter
+        avg(case when sell_token0_pressure_usd < 0 then sell_token0_pressure_usd end) as sell_token0_pressure_usd,
+        -- since group by abs change percent, there is some buy_token0_pressure_usd=0 from sell pressure side
+        avg(case when buy_token0_pressure_usd > 0 then buy_token0_pressure_usd end) as buy_token0_pressure_usd
+    from lp_distribution_with_pressure
+    group by 1
+)
+where sell_token0_pressure_usd is not null 
+    and buy_token0_pressure_usd is not null
+order by 1 
