@@ -172,6 +172,7 @@ select
     lpd.price0_in1,
     lpd.price1_in0,
     lpd.liquidity,
+    'LP' as flag, -- used in plotting chart
 
     lpd.price0_to_now_ratio,
     lpd.price0_to_now_delta_ratio,
@@ -192,3 +193,23 @@ select
     end as buy_token0_ressure_usd
 from lp_distribution_with_cumsum_liq lpd 
 cross join zeropoint_cumsum_usdliq zero
+
+union all 
+
+select 
+    tick,
+    price0_in1,
+    price1_in0,
+    liquidity,
+    'SWAP' as flag, -- used in plotting chart
+
+    1 as price0_to_now_ratio,
+    0 as price0_to_now_delta_ratio,
+    1 as price1_to_now_ratio,
+    0 as price1_to_now_delta_ratio,
+
+    null as token0_amt_adjdec,
+    null as token1_amt_adjdec,
+    null as sell_token0_pressure_usd, 
+    null as buy_token0_ressure_usd
+from latest_swap
