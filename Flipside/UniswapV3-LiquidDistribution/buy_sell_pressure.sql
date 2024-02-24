@@ -202,7 +202,8 @@ select
     sell_token0_pressure_usd,
     buy_token0_pressure_usd,
     -- if sell pressure is higher than buy pressure, encourage to buy, long is strong
-    -1*sell_token0_pressure_usd / buy_token0_pressure_usd as long_token0_strength
+    -- the sell pressure stronger, the price is more likely to rise 
+    -1*sell_token0_pressure_usd / buy_token0_pressure_usd-1 as long_token0_strength
 from (
     select 
         price0_abs_delta_percent,
