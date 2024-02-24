@@ -89,17 +89,16 @@ swap_neighbor_lp_temp1 as (
         sw.tick as swap_tick,
         power(1.0001, sw.tick / 2) as now_sqrtp, -- sqrt price after swap
 
-        sw.price0_in1 as swap_price0_in1, 
-        sw.price1_in0 as swap_price1_in0, 
-        sw.price0_usd as swap_price0_usd, 
-        sw.price1_usd as swap_price1_usd,
+        sw.price0_in1 as now_price0_in1, 
+        sw.price1_in0 as now_price1_in0, 
+        sw.price0_usd as now_price0_usd, 
+        sw.price1_usd as now_price1_usd,
 
         pi.token0_decimals,
         pi.token1_decimals
     from tick_net_liquidity tl
     cross join latest_swap sw -- just one row
     cross join pool_info pi -- just one row
-    where tl.tick between sw.tick - 10000 and sw.tick + 10000
 ),
 
 swap_neighbor_lp_temp2 as (
@@ -108,6 +107,12 @@ swap_neighbor_lp_temp2 as (
         price0_in1,
         1/ price0_in1 as price1_in0,
         liquidity,
+
+        price0_in1 / now_price0_in1 as price0_to_now_ratio,
+        1/ price0_in1 / now_price1_in0 as price1_to_now_ratio,
+
+        now_price0_usd, 
+        now_price1_usd,
 
         -- !NOTE: at tick > current swap tick, all liquidity are composed of token0 
         -- that is because, current tick can only move to those higher ticks when token0 is bought from pool, so higher ticks only need store token0
@@ -128,8 +133,24 @@ swap_neighbor_lp_temp2 as (
         end as token1_amt_adjdec -- adjdec: decimals adjusted
 
     from swap_neighbor_lp_temp1
+    where price0_in1 between now_price0_in1 * 0.5 and now_price0_in1 * 1.5
 )
 
 
-select * from swap_neighbor_lp_temp2
+select 
+    tick, -- tick range [tick, next_tick)
+    price0_in1,
+    1/ price0_in1 as price1_in0,
+    liquidity,
+
+    price0_to_now_ratio,
+    price0_to_now_ratio-1 as price0_to_now_delta_ratio,
+    price1_to_now_ratio,
+    price1_to_now_ratio-1 as price1_to_now_delta_ratio,
+
+    token0_amt_adjdec,
+    token1_amt_adjdec,
+    (token0_amt_adjdec * now_price0_usd + token1_amt_adjdec * now_price1_usd) as liquidity_usd
+
+from swap_neighbor_lp_temp2
 order by tick
