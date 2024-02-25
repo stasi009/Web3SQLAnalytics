@@ -21,23 +21,24 @@ with info as (
     limit 1
 )
 
--- stupid flipside cannot rotate the table when displayed in the dashboard
-select 'swap time' as name, block_timestamp as value from info 
+-- ! stupid flipside cannot rotate the table when displayed in the dashboard
+-- !NOTE: and you have to cast all 'value' column into same type
+select 'swap time' as name, block_timestamp::varchar as value from info 
 union all 
 
 select 'token0 address' as name, token0_address as value from info 
 union all 
 select 'token0 symbol' as name, token0_symbol as value from info 
 union all 
-select 'amount of token1 per token0' as name, price_1_0 as value from info 
+select 'amount of token1 per token0' as name, price_1_0::varchar as value from info 
 union all 
-select 'token0 usd price' as name, token0_price as value from info 
+select 'token0 usd price' as name, token0_price::varchar as value from info 
 union all 
 
 select 'token1 address' as name, token1_address as value from info 
 union all 
 select 'token1 symbol' as name, token1_symbol as value from info 
 union all 
-select 'amount of token0 per token1' as name, price_0_1 as value from info 
+select 'amount of token0 per token1' as name, price_0_1::varchar as value from info 
 union all 
-select 'token1 usd price' as name, token1_price as value from info 
+select 'token1 usd price' as name, token1_price::varchar as value from info 
