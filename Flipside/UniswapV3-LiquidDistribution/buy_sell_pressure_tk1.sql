@@ -200,23 +200,23 @@ lp_distribution_with_pressure as (
 )
 
 select 
-    price0_abs_delta_percent,
-    sell_token0_pressure_usd,
-    buy_token0_pressure_usd,
+    price1_abs_delta_percent,
+    sell_token1_pressure_usd,
+    buy_token1_pressure_usd,
     -- if sell pressure is higher than buy pressure, encourage to buy, long is strong
     -- the sell pressure stronger, the price is more likely to rise 
-    -1*sell_token0_pressure_usd / buy_token0_pressure_usd-1 as long_token0_strength
+    -1*sell_token1_pressure_usd / buy_token1_pressure_usd-1 as long_token1_strength
 from (
     select 
-        price0_abs_delta_percent,
+        price1_abs_delta_percent,
         -- since group by abs change percent, there is some sell_token0_pressure_usd=0 from buy pressure side
         -- ! NOTE: snowflake doesn't support filter
-        avg(case when sell_token0_pressure_usd < 0 then sell_token0_pressure_usd end) as sell_token0_pressure_usd,
+        avg(case when sell_token1_pressure_usd < 0 then sell_token1_pressure_usd end) as sell_token1_pressure_usd,
         -- since group by abs change percent, there is some buy_token0_pressure_usd=0 from sell pressure side
-        avg(case when buy_token0_pressure_usd > 0 then buy_token0_pressure_usd end) as buy_token0_pressure_usd
+        avg(case when buy_token1_pressure_usd > 0 then buy_token1_pressure_usd end) as buy_token1_pressure_usd
     from lp_distribution_with_pressure
     group by 1
 )
-where sell_token0_pressure_usd is not null 
-    and buy_token0_pressure_usd is not null
+where sell_token1_pressure_usd is not null 
+    and buy_token1_pressure_usd is not null
 order by 1 
