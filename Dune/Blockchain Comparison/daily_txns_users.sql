@@ -25,4 +25,20 @@ select * from "query_3474945(evm_blockchain='ethereum',back_days='{{back_days}}'
 
 union all
 
+select * from "query_3474945(evm_blockchain='arbitrum',back_days='{{back_days}}')"
+
+union all
+
+select * from "query_3474945(evm_blockchain='avalanche_c',back_days='{{back_days}}')"
+
+union all
+
+select * from "query_3474945(evm_blockchain='optimism',back_days='{{back_days}}')"
+
+union all
+
+select * from "query_3474945(evm_blockchain='polygon',back_days='{{back_days}}')"
+
+union all
+
 select * from solana_daily_txns
