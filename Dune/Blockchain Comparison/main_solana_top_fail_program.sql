@@ -42,8 +42,8 @@ with program_n_success as (
 
 select 
     hfp.program_id
-    , pn.namespace
-    , pn.program_name
+    , pn.namespace || ': ' || pn.program_name as program_name
+    , get_href(get_chain_explorer_address('solana', hfp.program_id), coalesce(pn.program_name,'link')) as link
     , hfp.total_txns
     , hfp.total_succ_txns
     , hfp.success_rate
