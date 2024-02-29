@@ -1,7 +1,7 @@
 
 with user_first_day as (
     select 
-        "from" as user,
+        "from" as user
         , min(block_date) as first_day
     from {{evm_blockchain}}.transactions txn
     -- between include both ends
