@@ -21,27 +21,24 @@ with solana_daily_txns as (
     )   
 )
 
-select * from (
-    select * from "query_3474945(evm_blockchain='ethereum',back_days='{{back_days}}')"
+select * from "query_3474945(evm_blockchain='ethereum',back_days='{{back_days}}')"
 
-    union all
+union all
 
-    select * from "query_3474945(evm_blockchain='arbitrum',back_days='{{back_days}}')"
+select * from "query_3474945(evm_blockchain='arbitrum',back_days='{{back_days}}')"
 
-    union all
+union all
 
-    select * from "query_3474945(evm_blockchain='avalanche_c',back_days='{{back_days}}')"
+select * from "query_3474945(evm_blockchain='avalanche_c',back_days='{{back_days}}')"
 
-    union all
+union all
 
-    select * from "query_3474945(evm_blockchain='optimism',back_days='{{back_days}}')"
+select * from "query_3474945(evm_blockchain='optimism',back_days='{{back_days}}')"
 
-    union all
+union all
 
-    select * from "query_3474945(evm_blockchain='polygon',back_days='{{back_days}}')"
+select * from "query_3474945(evm_blockchain='polygon',back_days='{{back_days}}')"
 
-    union all
+union all
 
-    select * from solana_daily_txns
-)
-order by blockchain -- 固定顺序方便固定自动着色
+select * from solana_daily_txns
