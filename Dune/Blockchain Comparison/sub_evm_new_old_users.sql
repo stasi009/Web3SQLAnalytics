@@ -4,9 +4,6 @@ with user_first_day as (
         "from" as user
         , min(block_date) as first_day
     from {{evm_blockchain}}.transactions txn
-    -- between include both ends
-    where block_date between current_date - interval '{{back_days}}' day 
-                    and current_date - interval '1' day
     group by 1
 )
 
@@ -23,7 +20,7 @@ with user_first_day as (
         , count(txn.hash) filter (where success) as num_success_txn
         , count(distinct txn."from") as num_users
     from {{evm_blockchain}}.transactions txn 
-    inner join user_first_day fd -- I can use inner join here because user_first_day come from the same query
+    inner join user_first_day fd -- I can inner join here because user_first_day derives from same dataset
         on txn."from" = fd.user
         -- apply fiter condition during join, this can reduce join size
         -- this can work, because I am using a inner join
@@ -45,3 +42,4 @@ select
     
     , num_users
 from txn_grpby_day_usertype
+order by block_date, user_new_old
