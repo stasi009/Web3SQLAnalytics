@@ -54,24 +54,27 @@ with solana_user_first_day as (
     order by block_date
 )
 
-select * from "query_3477050(evm_blockchain='ethereum',back_days='{{back_days}}')"
+select * from (
+    select * from "query_3477050(evm_blockchain='ethereum',back_days='{{back_days}}')"
 
-union all
+    union all
 
-select * from "query_3477050(evm_blockchain='arbitrum',back_days='{{back_days}}')"
+    select * from "query_3477050(evm_blockchain='arbitrum',back_days='{{back_days}}')"
 
-union all
+    union all
 
-select * from "query_3477050(evm_blockchain='avalanche_c',back_days='{{back_days}}')"
+    select * from "query_3477050(evm_blockchain='avalanche_c',back_days='{{back_days}}')"
 
-union all
+    union all
 
-select * from "query_3477050(evm_blockchain='optimism',back_days='{{back_days}}')"
+    select * from "query_3477050(evm_blockchain='optimism',back_days='{{back_days}}')"
 
-union all
+    union all
 
-select * from "query_3477050(evm_blockchain='polygon',back_days='{{back_days}}')"
+    select * from "query_3477050(evm_blockchain='polygon',back_days='{{back_days}}')"
 
-union all
+    union all
 
-select * from solana_txn_grpby_day
+    select * from solana_txn_grpby_day
+)
+order by blockchain -- 固定顺序方便固定自动着色
