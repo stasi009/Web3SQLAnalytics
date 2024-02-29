@@ -40,9 +40,29 @@ with solana_user_first_day as (
 
         , num_txn / 86400.0 as txn_per_sec
         , num_success_txn / 86400.0 as succ_txn_per_sec
-        
+
         , num_users
     from solana_txn_grpby_day_usertype_tmp
 )
+
+select * from "query_3477050(evm_blockchain='ethereum',back_days='{{back_days}}')"
+
+union all
+
+select * from "query_3477050(evm_blockchain='arbitrum',back_days='{{back_days}}')"
+
+union all
+
+select * from "query_3477050(evm_blockchain='avalanche_c',back_days='{{back_days}}')"
+
+union all
+
+select * from "query_3477050(evm_blockchain='optimism',back_days='{{back_days}}')"
+
+union all
+
+select * from "query_3477050(evm_blockchain='polygon',back_days='{{back_days}}')"
+
+union all
 
 select * from solana_txn_grpby_day_usertype
