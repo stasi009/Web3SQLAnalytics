@@ -31,7 +31,7 @@ with user_first_day as (
     select 
         block_date
 
-        , count(txn_hash) filter (where is_new_user )as num_txn_new_users
+        , count(txn_hash) filter (where is_new_user) as num_txn_new_users
         , count(txn_hash) filter (where not is_new_user) as num_txn_old_users
 
         , count(distinct user) filter (where is_new_user) as num_new_users
