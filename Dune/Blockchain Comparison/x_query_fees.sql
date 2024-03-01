@@ -75,6 +75,28 @@ with ethereum_fees as (
         and t.gas_used > 0
 )
 
+, avalanche_c_fee as (
+    select 
+        -- t.hash
+        get_href(get_chain_explorer_tx_hash('avalanche_c', t.hash), 'link') as link
+        , t.gas_used*t.gas_price /1e18 as txn_fee_avax
+
+        , t.gas_used        
+        , t.gas_price / 1e9 as gas_price_gwei
+
+        , b.base_fee_per_gas / 1e9 as base_fee_per_gas_gwei
+        , t.priority_fee_per_gas / 1e9 as priority_fee_per_gas_gwei
+        -- ? priority_fee_per_gas is null, but gas_price > b.base_fee_per_gas
+        , (t.gas_price = b.base_fee_per_gas + t.priority_fee_per_gas) as gas_price_matched
+
+    from avalanche_c.transactions t
+    inner join avalanche_c.blocks b
+        on t.block_number = b.number
+    where block_date = current_date 
+        and success
+        and t.gas_used > 0
+)
+
 , polygon_fee as (
     select 
         -- t.hash
@@ -98,5 +120,5 @@ with ethereum_fees as (
         and t.gas_used > 0
 )
 
-select * from polygon_fee
+select * from avalanche_c_fee
 limit 10
