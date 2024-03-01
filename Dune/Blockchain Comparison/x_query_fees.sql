@@ -28,14 +28,15 @@ with ethereum_fees as (
         , t.gas_price / 1e9 as gas_price_gwei
         , t.effective_gas_price / 1e9 as effective_gas_price_gwei
 
-        -- !!! NOT t.gas_price / 1e18 * t.gas_used as txn_fee_eth
+        -- * NOTE: t.gas_price / 1e18 * t.gas_used as txn_fee_eth
         , t.effective_gas_price / 1e18 * t.gas_used as txn_fee_eth
 
         , b.base_fee_per_gas / 1e9 as base_fee_per_gas_gwei
         , t.priority_fee_per_gas / 1e9 as priority_fee_per_gas_gwei
-        -- !!! NOTE: NOT gas_price, some gas_price are 0
-        -- , (t.gas_price - b.base_fee_per_gas - t.priority_fee_per_gas = 0) as gas_price_matched
-        , (t.effective_gas_price - b.base_fee_per_gas - t.priority_fee_per_gas = 0) as effective_gas_price_matched
+
+        -- * NOTE: both following statements NOT always true
+        , (t.gas_price = b.base_fee_per_gas + t.priority_fee_per_gas) as gas_price_matched
+        , (t.effective_gas_price = b.base_fee_per_gas + t.priority_fee_per_gas) as effective_gas_price_matched
 
     from arbitrum.transactions t
     inner join arbitrum.blocks b
@@ -46,7 +47,56 @@ with ethereum_fees as (
         and t.gas_used > 0
 )
 
-, 
+, optimism_fees as (
+    select 
+        -- t.hash
+        get_href(get_chain_explorer_tx_hash('optimism', t.hash), 'link') as link
+        , (t.l1_gas_price * t.l1_gas_used * t.l1_fee_scalar + t.gas_used*t.gas_price)/1e18 as txn_fee_eth
 
-select * from arbitrum_fees
+        , t.gas_used        
+        , t.gas_price / 1e9 as gas_price_gwei
+
+        , t.l1_gas_used
+        , t.l1_gas_price / 1e9 as l1_gas_price_gwei
+
+        , b.base_fee_per_gas / 1e9 as base_fee_per_gas_gwei
+        , t.priority_fee_per_gas / 1e9 as priority_fee_per_gas_gwei
+        , (t.gas_price = b.base_fee_per_gas + t.priority_fee_per_gas) as gas_price_matched
+
+        -- * NOTE: almost zero, so l1_fee=l1_gas_price * l1_gas_used * l1_fee_scalar
+        -- difference < 1wei
+        , (t.l1_gas_price * t.l1_gas_used * t.l1_fee_scalar - t.l1_fee) as calc_l1_fee_diff
+
+    from optimism.transactions t
+    inner join optimism.blocks b
+        on t.block_number = b.number
+    where block_date = current_date 
+        and success
+        and t.gas_used > 0
+)
+
+, polygon_fee as (
+    select 
+        -- t.hash
+        get_href(get_chain_explorer_tx_hash('polygon', t.hash), 'link') as link
+        , t.gas_used*t.gas_price /1e18 as txn_fee_matic
+
+        , t.gas_used        
+        , t.gas_price / 1e9 as gas_price_gwei
+
+
+        , b.base_fee_per_gas / 1e9 as base_fee_per_gas_gwei
+        , t.priority_fee_per_gas / 1e9 as priority_fee_per_gas_gwei
+        -- ? priority_fee_per_gas is null, but gas_price > b.base_fee_per_gas
+        , (t.gas_price = b.base_fee_per_gas + t.priority_fee_per_gas) as gas_price_matched
+
+    from polygon.transactions t
+    inner join polygon.blocks b
+        on t.block_number = b.number
+    where block_date = current_date 
+        and success
+        and t.gas_used > 0
+)
+
+select * from polygon_fee
 limit 10
