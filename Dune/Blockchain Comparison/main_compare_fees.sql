@@ -15,6 +15,10 @@ with prices_usd as (
     select 
         block_date
         , 'ethereum' as blockchain
+
+        , avg(fee_native) as avg_txnfee_native
+        , approx_percentile(fee_native, 0.5) as median_txnfee_native
+
         , avg(fee_usd) as avg_txnfee_usd
         , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
     from (
@@ -35,6 +39,10 @@ with prices_usd as (
     select 
         block_date
         , 'arbitrum' as blockchain
+
+        , avg(fee_native) as avg_txnfee_native
+        , approx_percentile(fee_native, 0.5) as median_txnfee_native
+
         , avg(fee_usd) as avg_txnfee_usd
         , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
     from (
@@ -55,6 +63,10 @@ with prices_usd as (
     select 
         block_date
         , 'avalanche_c' as blockchain
+
+        , avg(fee_native) as avg_txnfee_native
+        , approx_percentile(fee_native, 0.5) as median_txnfee_native
+
         , avg(fee_usd) as avg_txnfee_usd
         , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
     from (
@@ -75,6 +87,10 @@ with prices_usd as (
     select 
         block_date
         , 'optimism' as blockchain
+
+        , avg(fee_native) as avg_txnfee_native
+        , approx_percentile(fee_native, 0.5) as median_txnfee_native
+
         , avg(fee_usd) as avg_txnfee_usd
         , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
     from (
@@ -95,6 +111,10 @@ with prices_usd as (
     select 
         block_date
         , 'polygon' as blockchain
+
+        , avg(fee_native) as avg_txnfee_native
+        , approx_percentile(fee_native, 0.5) as median_txnfee_native
+
         , avg(fee_usd) as avg_txnfee_usd
         , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
     from (
