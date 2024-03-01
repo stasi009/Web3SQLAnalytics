@@ -28,7 +28,7 @@ with ethereum_fees as (
         , t.gas_price / 1e9 as gas_price_gwei
         , t.effective_gas_price / 1e9 as effective_gas_price_gwei
 
-        -- * NOTE: t.gas_price / 1e18 * t.gas_used as txn_fee_eth
+        -- ! NOT xxx t.gas_price / 1e18 * t.gas_used as txn_fee_eth
         , t.effective_gas_price / 1e18 * t.gas_used as txn_fee_eth
 
         , b.base_fee_per_gas / 1e9 as base_fee_per_gas_gwei
