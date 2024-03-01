@@ -120,5 +120,16 @@ with ethereum_fees as (
         and t.gas_used > 0
 )
 
-select * from avalanche_c_fee
+, solana_fee as (
+    select 
+        -- t.hash
+        get_href(get_chain_explorer_tx_hash('solana', t.id), 'link') as link
+        , t.fee / 1e9 as txn_fee_sol
+
+    from solana.transactions t
+    where block_date = current_date 
+        and success
+)
+
+select * from solana_fee
 limit 10
