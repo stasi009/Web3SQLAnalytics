@@ -39,8 +39,7 @@ with prices_usd as (
     from (
         select 
             block_date
-            , count(hash) as num_txn
-            , sum(txn.effective_gas_price / 1e18 * txn.gas_used * p.price) as total_fee_usd
+            , txn.effective_gas_price / 1e18 * txn.gas_used * p.price as fee_usd
         from arbitrum.transactions txn
         inner join prices_usd p
             on p.minute = date_trunc('minute',txn.block_time)
@@ -60,14 +59,33 @@ with prices_usd as (
     from (
         select 
             block_date
-            , count(hash) as num_txn
-            , sum(txn.gas_used * txn.gas_price /1e18 * p.price) as total_fee_usd
+            , txn.gas_used * txn.gas_price /1e18 * p.price as fee_usd
         from avalanche_c.transactions txn
         inner join prices_usd p
             on p.minute = date_trunc('minute',txn.block_time)
         where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
             and p.blockchain is null 
             and p.symbol = 'AVAX'
+    )
+    group by 1
+)
+
+, optimism_daily_fee as (
+    select 
+        block_date
+        , 'optimism' as blockchain
+        , avg(fee_usd) as avg_txnfee_usd
+        , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
+    from (
+        select 
+            block_date
+            , (txn.l1_fee + txn.gas_used * txn.gas_price) /1e18 * p.price as fee_usd
+        from optimism.transactions txn
+        inner join prices_usd p
+            on p.minute = date_trunc('minute',txn.block_time)
+        where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+            and p.blockchain is null 
+            and p.symbol = 'ETH'
     )
     group by 1
 )
