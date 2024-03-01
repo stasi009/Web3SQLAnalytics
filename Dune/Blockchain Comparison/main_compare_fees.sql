@@ -53,9 +53,10 @@ with prices_usd as (
 
 , avalanche_c_daily_fee as (
     select 
-        'avalanche_c' as blockchain
-        , block_date
-        , total_fee_usd / num_txn as avg_txn_fee_usd
+        block_date
+        , 'avalanche_c' as blockchain
+        , avg(fee_usd) as avg_txnfee_usd
+        , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
     from (
         select 
             block_date
@@ -67,8 +68,8 @@ with prices_usd as (
         where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
             and p.blockchain is null 
             and p.symbol = 'AVAX'
-        group by 1
     )
+    group by 1
 )
 
 select * from ethereum_daily_fee
