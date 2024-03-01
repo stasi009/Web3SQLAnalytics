@@ -6,7 +6,8 @@ with prices_usd as (
         , price 
     from prices.usd
     where 
-        symbol in ('ETH','SOL','AVAX','MATIC')
+        blockchain is null -- for native token
+        and symbol in ('ETH','SOL','AVAX','MATIC')
         and date_trunc('day',minute) between current_date - interval '{{back_days}}' day and current_date - interval '1' day
 )
 
@@ -24,7 +25,6 @@ with prices_usd as (
         inner join prices_usd p
             on p.minute = date_trunc('minute',txn.block_time)
         where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
-            and p.blockchain is null 
             and p.symbol = 'ETH'
     )
     group by 1
@@ -44,7 +44,6 @@ with prices_usd as (
         inner join prices_usd p
             on p.minute = date_trunc('minute',txn.block_time)
         where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
-            and p.blockchain is null 
             and p.symbol = 'ETH'
     )
     group by 1
@@ -64,7 +63,6 @@ with prices_usd as (
         inner join prices_usd p
             on p.minute = date_trunc('minute',txn.block_time)
         where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
-            and p.blockchain is null 
             and p.symbol = 'AVAX'
     )
     group by 1
@@ -84,11 +82,29 @@ with prices_usd as (
         inner join prices_usd p
             on p.minute = date_trunc('minute',txn.block_time)
         where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
-            and p.blockchain is null 
             and p.symbol = 'ETH'
     )
     group by 1
 )
 
-select * from ethereum_daily_fee
+, polygon_daily_fee as (
+    select 
+        block_date
+        , 'polygon' as blockchain
+        , avg(fee_usd) as avg_txnfee_usd
+        , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
+    from (
+        select 
+            block_date
+            , txn.gas_price / 1e18 * txn.gas_used * p.price as fee_usd
+        from polygon.transactions txn
+        inner join prices_usd p
+            on p.minute = date_trunc('minute',txn.block_time)
+        where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+            and p.symbol = 'MATIC'
+    )
+    group by 1
+)
+
+select * from polygon_daily_fee
 
