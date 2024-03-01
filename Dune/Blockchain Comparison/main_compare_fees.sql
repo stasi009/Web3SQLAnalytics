@@ -20,6 +20,7 @@ with prices_usd as (
     from (
         select 
             block_date
+            , txn.gas_price / 1e18 * txn.gas_used as fee_native
             , txn.gas_price / 1e18 * txn.gas_used * p.price as fee_usd
         from ethereum.transactions txn
         inner join prices_usd p
@@ -39,6 +40,7 @@ with prices_usd as (
     from (
         select 
             block_date
+            , txn.effective_gas_price / 1e18 * txn.gas_used as fee_native
             , txn.effective_gas_price / 1e18 * txn.gas_used * p.price as fee_usd
         from arbitrum.transactions txn
         inner join prices_usd p
@@ -58,6 +60,7 @@ with prices_usd as (
     from (
         select 
             block_date
+            , txn.gas_price / 1e18 * txn.gas_used as fee_native
             , txn.gas_price / 1e18 * txn.gas_used * p.price as fee_usd
         from avalanche_c.transactions txn
         inner join prices_usd p
@@ -77,6 +80,7 @@ with prices_usd as (
     from (
         select 
             block_date
+            , (txn.l1_fee + txn.gas_used * txn.gas_price) / 1e18 as fee_native
             , (txn.l1_fee + txn.gas_used * txn.gas_price) / 1e18 * p.price as fee_usd
         from optimism.transactions txn
         inner join prices_usd p
@@ -96,6 +100,7 @@ with prices_usd as (
     from (
         select 
             block_date
+            , txn.gas_price / 1e18 * txn.gas_used as fee_native
             , txn.gas_price / 1e18 * txn.gas_used * p.price as fee_usd
         from polygon.transactions txn
         inner join prices_usd p
