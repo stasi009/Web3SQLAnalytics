@@ -131,5 +131,44 @@ with prices_usd as (
     group by 1
 )
 
+, solana_daily_fee as (
+    select 
+        block_date
+        , 'solana' as blockchain
+
+        , avg(fee_native) as avg_txnfee_native
+        , approx_percentile(fee_native, 0.5) as median_txnfee_native
+
+        , avg(fee_usd) as avg_txnfee_usd
+        , approx_percentile(fee_usd, 0.5) as median_txnfee_usd
+    from (
+        select 
+            block_date
+            , txn.fee / 1e9 as fee_native
+            , txn.fee / 1e9 * p.price as fee_usd
+        from solana.transactions txn
+        inner join prices_usd p
+            on p.minute = date_trunc('minute',txn.block_time)
+        where txn.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+            and p.symbol = 'SOL'
+    )
+    group by 1
+)
+
+select * from ethereum_daily_fee
+union all
+
+select * from arbitrum_daily_fee
+union all
+
+select * from avalanche_c_daily_fee
+union all
+
+select * from optimism_daily_fee
+union all
+
 select * from polygon_daily_fee
+union all
+
+select * from solana_daily_fee
 
