@@ -1,172 +1,253 @@
-with pork_price as (
-    select token_price_usd as pork_price_usd
-    from dex.prices_latest
-    where token_address = 0xb9f599ce614Feb2e1BBe58F180F370D05b39344E
-    order by block_time DESC
-    limit 1
-)
-, weth_price as (
-    select token_price_usd as weth_price_usd
-    from dex.prices_latest
-    where token_address = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-    order by block_time DESC
-    limit 1
-)
-, pork_tick as (
-    select 
-        ROUND(log(1.0001, pork_price_usd / weth_price_usd) / 200) * 200 as pork_tick,
-        power(1.0001, (ROUND(log(1.0001, pork_price_usd / weth_price_usd) / 200) * 200) / 2) as curr_sqrt_price,
-        (pork_price_usd / weth_price_usd) * 1e9 as weth_per_billi_pork,
-        pork_price_usd,
-        weth_price_usd
-    from pork_price
-       , weth_price
-)
-, hashes as (
-    select distinct evt_tx_hash as hash
-    from erc20_ethereum.evt_Transfer xfer
-    where contract_address = 0xb9f599ce614Feb2e1BBe58F180F370D05b39344E
-      and 0x331399c614cA67DEe86733E5A2FBA40DbB16827c in (xfer."from", xfer."to")
-) 
-, increase_liquidity as (
-    select distinct
-        'increase' as liq_type,
-        l.evt_tx_hash as hash,
-        xfer."to" as address,
-        l.tokenId,
-        date_trunc('hour', l.evt_block_time) as block_hour,
-        l.evt_block_number as block_number,
-        l.amount0 / 1e18 as pork,
-        l.amount1 / 1e18 as weth,
-        l.liquidity / 1e18 as liquidity,
-        varbinary_to_int256(log.topic2) as tickLower,
-        varbinary_to_int256(log.topic3) as tickHigher
-    from uniswap_v3_ethereum.NonfungibleTokenPositionManager_evt_Transfer xfer
-    join uniswap_v3_ethereum.NonfungibleTokenPositionManager_evt_IncreaseLiquidity l on l.tokenId = xfer.tokenId
-    left join ethereum.logs log on log.tx_hash = xfer.evt_tx_hash 
-                           and log.topic0 = 0x7a53080ba414158be7ec69b987b5fb7d07dee101fe85488f0853ae16239d0bde
-    join hashes h on h.hash = xfer.evt_tx_hash
-)
-, decrease_liquidity as (
-    select distinct
-        'decrease' as liq_type,
-        l.evt_tx_hash as hash,
-        xfer."to" as address,
-        l.tokenId,
-        date_trunc('hour', l.evt_block_time) as block_hour,
-        l.evt_block_number as block_number,
-        (l.amount0 / 1e18) * -1.0 as pork,
-        (l.amount1 / 1e18) * -1.0 as weth,
-        (l.liquidity / 1e18) * -1.0 as liquidity,
-        varbinary_to_int256(log.topic2) as tickLower,
-        varbinary_to_int256(log.topic3) as tickHigher
-    from uniswap_v3_ethereum.NonfungibleTokenPositionManager_evt_Transfer xfer
-    join uniswap_v3_ethereum.NonfungibleTokenPositionManager_evt_DecreaseLiquidity l on l.tokenId = xfer.tokenId
-    left join ethereum.logs log on log.tx_hash = xfer.evt_tx_hash 
-                           and log.topic0 = 0x0c396cd989a39f4459b5fa1aed6a9a8dcdbc45908acfd67e028cd568da98982c
-    join hashes h on h.hash = xfer.evt_tx_hash
-)
-, liquidity as (
-    select * from increase_liquidity 
-    union all
-    select * from decrease_liquidity
-)
-, liq_tokens as (
-    select tokenId
-         , sum(pork) as pork
-         , sum(weth) as weth
-         , sum(liquidity) as liquidity
-         , min(tickLower) as tickLower
-         , max(tickHigher) as tickHigher
-    from liquidity l
-    group by tokenId
-)
-, tick_ranges AS (
+WITH
+  running_total_supply /* look at total supply over time */ 
+  AS (
+    WITH
+      supply_actions AS (
+        SELECT
+          DATE_TRUNC('day', "evt_block_time") AS time,
+          CASE
+            WHEN t."from" = 0x0000000000000000000000000000000000000000 THEN 'minted'
+            WHEN t."to" = 0x0000000000000000000000000000000000000000 THEN 'burned'
+          END AS supply_action,
+          CASE
+            WHEN t."from" = 0x0000000000000000000000000000000000000000 THEN CAST(value AS DOUBLE)
+            WHEN t."to" = 0x0000000000000000000000000000000000000000 THEN -1 * CAST(value AS DOUBLE)
+          END AS token_value
+        FROM
+          erc20_{{Chain}}.evt_Transfer AS t
+        WHERE
+          "contract_address" = {{Token Address}}
+          AND (
+            t."from" = 0x0000000000000000000000000000000000000000
+            OR t."to" = 0x0000000000000000000000000000000000000000
+          )
+      ),
+      
+      daily_supply AS (
+        SELECT
+          "time",
+          SUM(CAST(token_value AS DOUBLE)/pow(10,COALESCE(tk.decimals,18))) AS daily_minted
+        FROM
+          supply_actions
+        LEFT JOIN tokens.erc20 tk ON blockchain = 'ethereum' AND tk.contract_address = {{Token Address}}
+        GROUP BY
+          1
+      )
+      
+    , total_supply as (
+        SELECT
+          "time",
+          SUM("daily_minted") OVER (
+            ORDER BY
+              "time"
+          ) AS total_supply
+        FROM
+          daily_supply ds 
+      ) 
+      
+     SELECT 
+     *
+     FROM total_supply
+  )
+  
+  , non_contract_balances AS (
+    WITH
+      tokens_sold AS (
+        SELECT
+          DATE_TRUNC('{{Granularity}}', tr."evt_block_time") AS time,
+          tr."from",
+          SUM(CAST(value AS DOUBLE)) AS value_sold
+        FROM
+          erc20_{{Chain}}.evt_Transfer AS tr
+        WHERE
+          tr."contract_address" = {{Token Address}}
+        GROUP BY
+          1,
+          2
+      ),
+      tokens_bought AS (
+        SELECT
+          DATE_TRUNC('{{Granularity}}', tr."evt_block_time") AS time,
+          tr."to",
+          SUM(CAST(value AS DOUBLE)) AS value_bought
+        FROM
+          erc20_{{Chain}}.evt_Transfer AS tr
+        WHERE
+          tr."contract_address" = {{Token Address}}
+        GROUP BY
+          1,
+          2
+      ),
+      daily_bought_sold AS (
+        SELECT
+          COALESCE(b."time", s."time") AS time,
+          COALESCE(b."to", s."from") AS owner,
+          COALESCE(CAST(value_bought AS DOUBLE), 0)/pow(10,COALESCE(tk.decimals,18)) AS bought,
+          COALESCE(CAST(value_sold AS DOUBLE), 0)/pow(10,COALESCE(tk.decimals,18)) AS sold
+        FROM
+          tokens_bought AS b
+          FULL OUTER JOIN tokens_sold AS s ON b."time" = s."time"
+            AND b."to" = s."from"
+          LEFT JOIN tokens.erc20 tk ON blockchain = 'ethereum' AND tk.contract_address = {{Token Address}}
+      ),
+      daily_balances AS (
+        SELECT
+          *,
+          ROUND(
+            SUM(bought - sold) OVER (
+              PARTITION BY
+                "owner"
+              ORDER BY
+                "time"
+            ),
+            3
+          ) AS rolling_balance /* we round here because transfers w fees sometimes have rounding errors by 4th decimal */
+        FROM
+          daily_bought_sold
+      )
     SELECT
-        tokenId,
-        tickLower,
-        tickHigher,
-        liquidity,
-        tick,
-        power(1.0001, tick) as price_ratio,
-        power(1.0001, tick / 2) as sqrt_price_lower,
-        power(1.0001, (tick + 200) / 2) as sqrt_price_higher
-  FROM liq_tokens
-  CROSS JOIN UNNEST(SEQUENCE(cast(tickLower as bigint) + 200, cast(tickHigher as bigint), 200)) AS _u(tick)
-)
-, tick_liquidity AS (
-    SELECT
-        tick,
-        price_ratio,
-        sqrt_price_lower,
-        sqrt_price_higher,
-        SUM(liquidity) AS liquidity
-    FROM tick_ranges
-    GROUP BY tick, price_ratio, sqrt_price_lower, sqrt_price_higher
-)
-, ticks as(
-    select *
-         , net_liquidity * (sqrt_price_higher - sp) / (sp * sqrt_price_higher) as token0_amount
-         , net_liquidity * (sp - sqrt_price_lower) as token1_amount
-    from (
+      *
+    FROM
+      daily_balances AS db /* we don't want contracts in our balances */
+    WHERE
+      (
+        (
+            '{{Include Contracts}}' = 'include'
+            --if not include, then remove contracts
+            OR NOT EXISTS (
+              SELECT
+                1
+              FROM
+                {{Chain}}.creation_traces AS tr
+              WHERE
+                tr."address" = db."owner"
+            )
+        )
+        --we want to include argent and gnosis safes
+        OR EXISTS (
+            SELECT 
+            1
+            FROM labels.contracts c 
+            WHERE blockchain = '{{Chain}}'
+            AND c.address = db.owner
+            AND (lower(c.name) LIKE '%argent%' OR lower(c."name") LIKE '%aragon%' OR lower(c."name") LIKE '%daohaus%')
+        )
+        OR EXISTS ( 
+          SELECT 
+           1
+          FROM safe_{{Chain}}.safes
+          WHERE address = db.owner
+        ) 
+      )
+      AND "owner" != 0x0000000000000000000000000000000000000000
+  ),
+  
+  times AS (
         SELECT 
-            tick,
-            liquidity as net_liquidity,
-            price_ratio * 1e9 as weth_per_billi,
-            price_ratio * 1e9 * weth_price_usd as usd_per_billi,
-            
-            price_ratio,
-            sqrt_price_lower,
-            sqrt_price_higher,
-            curr_sqrt_price,
-            
-            case when 
-                case when curr_sqrt_price < sqrt_price_higher then curr_sqrt_price else sqrt_price_higher end > sqrt_price_lower
-                then case when curr_sqrt_price < sqrt_price_higher then curr_sqrt_price else sqrt_price_higher end
-                else sqrt_price_lower
-            end as sp,
-            
-            case when pork_tick = tick then pork_tick else 0 end as curr_pork_tick,
-            case when pork_tick = tick then weth_per_billi_pork else 0 end as curr_weth_per_billi_pork,
-            case when pork_tick = tick then weth_per_billi_pork * weth_price_usd else 0 end as curr_usd_per_billi_pork,
-            
-            pork_tick,
-            weth_per_billi_pork,
-            weth_per_billi_pork * weth_price_usd as usd_per_billi_pork,
-            
-            pork_price_usd,
-            weth_price_usd
-        FROM tick_liquidity
-           , pork_tick
-    )
-)
-, mafs as (
-    select *
-         , token1_amount + (token0_amount * price_ratio) as eth_locked
-         , (token1_amount + (token0_amount * price_ratio)) * weth_price_usd as eth_locked_usd
-         , sum((token1_amount + (token0_amount * price_ratio))) over (order by tick) as cum_eth
-         , sum((token1_amount + (token0_amount * price_ratio)) * weth_price_usd) over (order by tick) as cum_usd
-         , ((usd_per_billi - usd_per_billi_pork) / usd_per_billi_pork) as percent_change
-         , usd_per_billi / usd_per_billi_pork as x_change
-    from ticks
-    where tick between pork_tick - {{ticks_lower}} and pork_tick + {{ticks_higher}}
-)
-, curr_tick as (
-    select *
-    from mafs
-    where curr_weth_per_billi_pork > 0
-    limit 1
-)
-select mafs.*
-     
-     , mafs.cum_eth - curr_tick.cum_eth as cum_eth_zero
-     , case when mafs.cum_eth - curr_tick.cum_eth < 0 then mafs.cum_eth - curr_tick.cum_eth else 0 end as cum_eth_red
-     , case when mafs.cum_eth - curr_tick.cum_eth > 0 then mafs.cum_eth - curr_tick.cum_eth else 0 end as cum_eth_green
-     
-     , mafs.cum_usd - curr_tick.cum_usd as cum_usd_zero
-     , case when mafs.cum_usd - curr_tick.cum_usd < 0 then mafs.cum_usd - curr_tick.cum_usd else 0 end as cum_usd_red
-     , case when mafs.cum_usd - curr_tick.cum_usd > 0 then mafs.cum_usd - curr_tick.cum_usd else 0 end as cum_usd_green
-from mafs
-   , curr_tick
-order by tick
-
+            *
+        FROM query_2254711
+        WHERE 'month' = '{{Granularity}}'
+        AND time >= (SELECT min(time) FROM running_total_supply)
+        AND time <= CAST('{{End Date}}' AS TIMESTAMP)      
+        
+        UNION ALL 
+        
+        SELECT 
+            *
+        FROM query_2254709
+        WHERE 'week' = '{{Granularity}}'
+        AND time >= (SELECT min(time) FROM running_total_supply)
+        AND time <= CAST('{{End Date}}' AS TIMESTAMP)    
+        
+        UNION ALL 
+        
+        SELECT 
+            *
+        FROM query_2254698
+        WHERE 'day' = '{{Granularity}}'
+        AND time >= (SELECT min(time) FROM running_total_supply)
+        AND time <= CAST('{{End Date}}' AS TIMESTAMP)
+    ),
+  
+  owner_days /* cross join works for getting owner on each day, but it is slow (https://stackoverflow.com/questions/63130403/filling-missing-dates-in-each-group-while-querying-data-from-postgresql) */ 
+  AS (
+    SELECT DISTINCT
+      d."time",
+      "owner"
+    FROM
+      non_contract_balances
+      CROSS JOIN times AS d
+    GROUP BY
+      1,
+      2
+  ),
+  filled_owner_balances AS (
+    SELECT
+      *
+    FROM
+      (
+        SELECT
+          "time",
+          "owner",
+          FIRST_VALUE(rolling_balance) OVER (
+            PARTITION BY
+              "owner",
+              grp_rolling_balance
+          ) AS rolling_balance_final
+        FROM
+          (
+            SELECT
+              od."time",
+              od."owner",
+              n."rolling_balance",
+              SUM(
+                CASE
+                  WHEN NOT n.rolling_balance IS NULL THEN 1
+                END
+              ) OVER (
+                PARTITION BY
+                  od."owner"
+                ORDER BY
+                  od."time"
+              ) AS grp_rolling_balance
+            FROM
+              owner_days AS od
+              LEFT JOIN non_contract_balances AS n ON n."time" = od."time"
+              AND n."owner" = od."owner"
+          ) AS a
+      ) AS b
+    WHERE
+      NOT rolling_balance_final IS NULL
+      AND rolling_balance_final > 0 /* filter from cross join section */
+  ),
+  
+  supply_filled AS (
+    SELECT
+      "time",
+      coalesce(total_supply, lag(total_supply, 1) IGNORE NULLS OVER (ORDER BY time asc)) as total_supply
+    FROM
+      (
+        SELECT
+          COALESCE(t."time", s.time) as time,
+          total_supply
+        FROM
+          times AS t
+          FULL OUTER JOIN running_total_supply AS s ON t."time" = s."time"
+      ) AS p
+  )
+ 
+SELECT
+  fb."time",
+  s."total_supply",
+  approx_percentile(rolling_balance_final, 0.5) AS "50th_percentile_holdings",
+  approx_percentile(rolling_balance_final, 0.25) AS "25th_percentile_holdings",
+  approx_percentile(rolling_balance_final, 0.75) AS "75th_percentile_holdings"
+FROM
+  filled_owner_balances AS fb
+  LEFT JOIN supply_filled AS s ON s."time" = fb."time"
+WHERE
+  fb."time" >= CAST('{{Start Date}}' AS TIMESTAMP)
+  AND fb."time" <= CAST('{{End Date}}' AS TIMESTAMP)
+GROUP BY
+  1,
+  2
