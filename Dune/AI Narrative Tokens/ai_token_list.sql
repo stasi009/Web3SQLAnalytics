@@ -100,5 +100,4 @@ where tki.blockchain = 'ethereum'
             ,'WLD'
             ,'AGIX'
             ,'RNDR'
-            ,'VRA'
         )
