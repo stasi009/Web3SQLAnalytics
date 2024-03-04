@@ -1,5 +1,24 @@
 
-with mint as (
+with display_week_series as (
+    with ws as (
+        select 
+            week
+        from unnest(sequence(
+            date_trunc('week', date '2020-01-01'),
+            date_trunc('week',current_date),
+            interval '7' day
+        )) as week_tbl(week)
+    )
+    select 
+        ws.week
+        , ait.name as token_name
+        , ait.symbol
+        , ait.token_address
+    from query_3486591 ait -- ai token list
+    cross join ws
+)
+
+, mint as (
     select 
         block_time
         , token_name
@@ -35,11 +54,13 @@ with mint as (
     )
 
     select 
-        ws.
+        week
+        , token_name 
+        , token_address
+        , coalesce(week_net_supply,0) as week_net_supply
     from display_week_series ws
     left join temp 
-        on temp.week = ws.week
-    
+        using (week, token_name, token_address)
 )
 
 , total_supply as (
@@ -51,15 +72,13 @@ with mint as (
     from weekly_supply
 )
 
--- select 
---     week -- columns used in using cannot prefix with table qualifier
---     , token_name
---     , token_address
---     , ts.total_supply
---     , ts.total_supply * wp.price as total_supply_usd
--- from total_supply ts
--- inner join query_3486859 as wp -- ai token weekly price
---     using (week, token_address, token_name)
--- order by 1,2
-
-select * from display_week_series
+select 
+    week -- columns used in using cannot prefix with table qualifier
+    , token_name
+    , token_address
+    , ts.total_supply
+    , ts.total_supply * wp.price as total_supply_usd
+from total_supply ts
+inner join query_3486859 as wp -- ai token weekly price
+    using (week, token_address, token_name)
+order by 1,2
