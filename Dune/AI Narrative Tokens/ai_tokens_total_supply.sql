@@ -74,8 +74,9 @@ select
     week -- columns used in using cannot prefix with table qualifier
     , token_name
     , token_address
-    , ts.total_supply
-    , ts.total_supply * wp.price as total_supply_usd
+    -- +1: small trick, make the column always positive, suitable to display in log-scale
+    , ts.total_supply + 1 as total_supply
+    , ts.total_supply * wp.price + 1 as total_supply_usd
 from total_supply ts
 inner join weekly_price as wp -- ai token weekly price
     using (week, token_address, token_name)
