@@ -39,8 +39,8 @@ with mint as (
         , token_name 
         , token_address
         , coalesce(week_net_supply,0) as week_net_supply
-    -- query_3487348: every week, every token, has one row
-    from query_3487348 ws -- ai token full week series
+    -- query_3487348: ai token full week series, every week, every token, has one row
+    from query_3487348 ws 
     left join temp 
         using (week, token_name, token_address)
 )
