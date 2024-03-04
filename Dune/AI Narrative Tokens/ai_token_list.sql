@@ -1,5 +1,4 @@
-
-with all_ai_tokens(name,symbol,address,launch_date,description) as (
+with all_ai_tokens(name,symbol,token_address,launch_date,description) as (
     values
 
     ('Worldcoin',
@@ -86,5 +85,20 @@ with all_ai_tokens(name,symbol,address,launch_date,description) as (
     )
 )
 
-select *  
-from all_ai_tokens
+select 
+    ait.*
+    , tki.decimals
+from all_ai_tokens ait
+inner join tokens.erc20 tki
+    on ait.token_address = tki.contract_address
+    and ait.symbol = tki.symbol
+where tki.blockchain = 'ethereum'
+    and ait.symbol in ( -- select some still active tokens
+            'FET'
+            ,'LPT'
+            ,'INJ'
+            ,'WLD'
+            ,'AGIX'
+            ,'RNDR'
+            ,'VRA'
+        )
