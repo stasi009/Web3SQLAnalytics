@@ -1,11 +1,15 @@
-with display_week_series as (
+with boundaries as (
     select 
-        week
-    from unnest(sequence(
-        date_trunc('week', date '2020-01-01'),
-        date_trunc('week',current_date),
-        interval '7' day
-    )) as week_tbl(week)
+        date_trunc('week', min(launch_date) ) as start_week
+        , date_trunc('week',current_date) as end_week
+    from query_3486591 -- ai token list
+)
+
+, ws as (
+    select week
+    from boundaries bd 
+    -- sequence includes both ends
+    cross join unnest(sequence(bd.start_week, bd.end_week, interval '7' day)) as weeks(week)
 )
 
 select 
@@ -13,6 +17,7 @@ select
     , ait.name as token_name
     , ait.symbol
     , ait.token_address
-from query_3486591 ait
-cross join display_week_series ws
-order by 1
+from query_3486591 ait -- ai token list
+cross join ws
+
+
