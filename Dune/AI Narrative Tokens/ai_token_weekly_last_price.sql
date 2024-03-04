@@ -1,4 +1,3 @@
-
 with valid_prices as (
     select 
         p.minute
@@ -7,7 +6,7 @@ with valid_prices as (
         , ait.name as token_name
         , p.price 
     from prices.usd p
-    inner join query_3486591 ait-- ai tokens
+    inner join query_3486591 ait-- ai token list
         on p.contract_address = ait.token_address
         and p.symbol = ait.symbol
         and p.minute >= ait.launch_date
@@ -16,7 +15,6 @@ with valid_prices as (
 
 select 
     week 
-    , minute 
     , token_address
     , token_name
     , price
@@ -32,8 +30,3 @@ from (
 )
 where rn = 1
 order by 1
-
-
-
-
-
