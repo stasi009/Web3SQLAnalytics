@@ -1,24 +1,5 @@
 
-with display_week_series as (
-    with ws as (
-        select 
-            week
-        from unnest(sequence(
-            date_trunc('week', date '2020-01-01'),
-            date_trunc('week',current_date),
-            interval '7' day
-        )) as week_tbl(week)
-    )
-    select 
-        ws.week
-        , ait.name as token_name
-        , ait.symbol
-        , ait.token_address
-    from query_3486591 ait -- ai token list
-    cross join ws
-)
-
-, mint as (
+with mint as (
     select 
         block_time
         , token_name
@@ -58,7 +39,8 @@ with display_week_series as (
         , token_name 
         , token_address
         , coalesce(week_net_supply,0) as week_net_supply
-    from display_week_series ws
+    -- query_3487348: every week, every token, has one row
+    from query_3487348 ws -- ai token full week series
     left join temp 
         using (week, token_name, token_address)
 )
@@ -72,6 +54,22 @@ with display_week_series as (
     from weekly_supply
 )
 
+, weekly_price as (
+    select 
+        week
+        , token_name 
+        , token_address
+        -- during a token's early days, these tokens have already been minted / burnt / transferred
+        -- but during the early history, token's price has NOT been recorded yet
+        -- I have to use future price to fill the missing price for the early history
+        , coalesce(wp.price, lead(wp.price) ignore nulls over (partition by token_address order by week asc)) as price
+    -- query_3487348: ai token full week series, every week, every token, has one row
+    from query_3487348 ws
+    -- query_3486859: ai token weekly price but miss data for token's early history
+    left join query_3486859 as wp
+        using (week, token_name, token_address)
+)
+
 select 
     week -- columns used in using cannot prefix with table qualifier
     , token_name
@@ -79,6 +77,6 @@ select
     , ts.total_supply
     , ts.total_supply * wp.price as total_supply_usd
 from total_supply ts
-inner join query_3486859 as wp -- ai token weekly price
+inner join weekly_price as wp -- ai token weekly price
     using (week, token_address, token_name)
 order by 1,2
