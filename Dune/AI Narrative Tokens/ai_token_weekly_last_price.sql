@@ -13,22 +13,20 @@ with valid_prices as (
     and p.blockchain = 'ethereum'
 )
 
-, week_last_price as (
+select 
+    week 
+    , token_address
+    , token_name
+    , price
+from (
     select 
-        week 
+        week
+        , minute
         , token_address
         , token_name
         , price
-    from (
-        select 
-            week
-            , minute
-            , token_address
-            , token_name
-            , price
-            , row_number() over (partition by week,token_address order by minute desc) as rn
-        from valid_prices
-    )
-    where rn = 1
-    order by 1
+        , row_number() over (partition by week,token_address order by minute desc) as rn
+    from valid_prices
 )
+where rn = 1
+order by 1
