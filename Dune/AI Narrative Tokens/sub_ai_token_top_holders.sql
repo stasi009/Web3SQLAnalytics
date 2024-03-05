@@ -90,19 +90,27 @@ with one_ai_token as (
 , holder_balance_rank as (
     select 
         holder 
-        , get_href(get_chain_explorer_address('ethereum', holder),'scan') as link
+        , get_href(get_chain_explorer_address('ethereum', holder), holder_type) as link
         , holder_type
         , hold_percent
         , rank() over (partition by holder_type order by hold_percent desc) as rank
     from holder_balance_percent
 )
 
-select * from holder_balance_rank
-where holder_type = 'Contract'
-    and rank <= 5
+select 
+    holder
+    , link  
+    , hold_percent
+    , sum(hold_percent) over (order by hold_percent desc) as cumsum_hold_percent
+from (
+    select * from holder_balance_rank
+    where holder_type = 'Contract'
+        and rank <= 5
 
-union all
+    union all
 
-select * from holder_balance_rank
-where holder_type = 'EOA'
-    and rank <= 5
+    select * from holder_balance_rank
+    where holder_type = 'EOA'
+        and rank <= 5
+)
+order by hold_percent desc
