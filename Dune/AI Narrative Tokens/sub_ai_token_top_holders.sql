@@ -73,9 +73,21 @@ with one_ai_token as (
     having sum(value_adjdec) > 0
 )
 
-, holder_balance_percent as (
+, current_prices as (
+    select 
+        p.price 
+    from prices.usd_latest p 
+    inner join one_ai_token ait-- ai token list
+        on p.contract_address = ait.token_address
+        and p.symbol = ait.token_symbol
+    and p.blockchain = 'ethereum'
+)
+
+, holder_balance_percent_usd as (
     select 
         ba.holder
+        , ba.balance
+        , ba.balance * p.price as balance_usd
         , cast(ba.balance as double)  / ts.total_supply as hold_percent
         , case 
             when cr.address is null then 'EOA'
@@ -83,6 +95,7 @@ with one_ai_token as (
         end as holder_type
     from holder_balance as ba
     cross join total_supply as ts
+    cross join current_prices as p
     left join ethereum.creation_traces as cr 
         on ba.holder = cr.address
 )
@@ -92,14 +105,18 @@ with one_ai_token as (
         holder 
         , get_href(get_chain_explorer_address('ethereum', holder), holder_type) as link
         , holder_type
+        , balance 
+        , balance_usd
         , hold_percent
         , rank() over (partition by holder_type order by hold_percent desc) as rank
-    from holder_balance_percent
+    from holder_balance_percent_usd
 )
 
 select 
     holder
     , link  
+    , balance 
+    , balance_usd
     , hold_percent
     , sum(hold_percent) over (order by hold_percent desc) as cumsum_hold_percent
 from (
