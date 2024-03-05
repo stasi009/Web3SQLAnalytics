@@ -99,9 +99,10 @@ with non_wallet_contracts as ( -- contracts exclude wallets and safes
     from holder_balance as ba
     inner join total_supply as ts
         using (token_name, token_address)
-    left join non_wallet_contracts nwc -- contracts exclude wallets and safe
-        on nwc.address = ba.holder
-    where nwc.address is null -- holder cannot be contract (except wallet or DAO)
+    -- 🦀uncomment following lines to exclude contract holders from calculating HHI
+    -- left join non_wallet_contracts nwc -- contracts exclude wallets and safe
+    --     on nwc.address = ba.holder
+    -- where nwc.address is null -- holder cannot be contract (except wallet or DAO)
 )
 
 --- *************************** MAIN
