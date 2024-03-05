@@ -8,6 +8,20 @@ with one_ai_token as (
     where symbol = '{{symbol}}'
 )
 
+, aitoken_token_transfer as (
+    select
+        tsf.evt_block_time as block_time
+        , tsf.contract_address as token_address
+        , ait.name as token_name
+        , tsf."from"
+        , tsf.to
+        , tsf.value / power(10, ait.decimals) as value_adjdec -- adjdec means "decimals adjusted"
+    from erc20_ethereum.evt_Transfer tsf 
+    inner join one_ai_token ait -- ai token list
+        on tsf.contract_address = ait.token_address -- only care about ai tokens
+        and tsf.evt_block_time >= ait.launch_date -- redundant condition, but can speed up to add constraints on time
+)
+
 --- *************************** total supply
 , mint as (
     select 
@@ -15,7 +29,7 @@ with one_ai_token as (
         , token_name
         , token_address
         , value_adjdec as supply
-    from query_3486854 as ait -- ai token transfer
+    from aitoken_token_transfer as ait -- ai token transfer
     where ait."from" = 0x0000000000000000000000000000000000000000
 )
 
@@ -25,7 +39,7 @@ with one_ai_token as (
         , token_name
         , token_address
         , -1*value_adjdec as supply
-    from query_3486854 as ait -- ai token transfer
+    from aitoken_token_transfer as ait -- ai token transfer
     where ait.to = 0x0000000000000000000000000000000000000000
 )
 
@@ -49,7 +63,7 @@ with one_ai_token as (
         , token_name
         , token_address
         , value_adjdec
-    from query_3486854 as ait -- ai token transfer
+    from aitoken_token_transfer as ait -- ai token transfer
     where ait.to <> 0x0000000000000000000000000000000000000000
 )
 
@@ -59,7 +73,7 @@ with one_ai_token as (
         , token_name
         , token_address
         , -1*value_adjdec as value_adjdec
-    from query_3486854 as ait -- ai token transfer
+    from aitoken_token_transfer as ait -- ai token transfer
     where ait."from" <> 0x0000000000000000000000000000000000000000
 )
 
