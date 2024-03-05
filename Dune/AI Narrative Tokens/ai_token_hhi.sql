@@ -1,6 +1,27 @@
 
+with non_wallet_contracts as ( -- contracts exclude wallets and safes
+    with wallet_or_dao as (
+        select 
+            address
+        from labels.contracts c
+        where blockchain='ethereum'
+            and (lower(c.name) LIKE '%argent%' -- argent wallet
+                OR lower(c.name) LIKE '%aragon%' -- Aragon: Govern for DAO
+                )
+    )
+    select 
+        cr.address 
+    from ethereum.creation_traces as cr 
+    left join safe_ethereum.safes as sf 
+        on cr.address = sf.address 
+    left join wallet_or_dao as wa 
+        on cr.address = wa.address
+    where sf.address is null -- cannot match safe contracts
+        and wa.address is null -- cannot match wallet contracts
+)
+
 --- *************************** total supply
-with mint as (
+, mint as (
     select 
         block_time
         , token_name
@@ -78,6 +99,9 @@ with mint as (
     from holder_balance as ba
     inner join total_supply as ts
         using (token_name, token_address)
+    left join non_wallet_contracts nwc -- contracts exclude wallets and safe
+        on nwc.address = ba.holder
+    where nwc.address is null -- holder cannot be contract (except wallet or DAO)
 )
 
 --- *************************** MAIN
