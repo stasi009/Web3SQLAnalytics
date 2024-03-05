@@ -4,6 +4,7 @@ with one_ai_token as (
         , symbol as token_symbol
         , token_address
         , launch_date
+        , decimals
     from query_3486591 -- ai token list
     where symbol = '{{symbol}}'
 )
