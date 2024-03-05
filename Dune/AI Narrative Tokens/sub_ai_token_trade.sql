@@ -6,7 +6,8 @@ with one_ai_token as (
         , token_address
         , launch_date
     from query_3486591 -- ai token list
-    where symbol = '{{symbol}}'
+    -- have to change to all lower case, because Dune Query a Query cannot accept Upper Case
+    where lower(symbol) = lower('{{symbol}}')
 )
 
 , trades as (
@@ -120,3 +121,13 @@ inner join weekly_last_price wp
 inner join weekly_new_traders nu
     using (week)
 order by 1
+
+-- select * from "query_3490600(symbol='WLD')"
+-- select * from "query_3490600(symbol='RNDR')"
+-- select * from "query_3490600(symbol='VRA')"
+-- select * from "query_3490600(symbol='LPT')"
+-- select * from "query_3490600(symbol='FET')"
+-- select * from "query_3490600(symbol='AGIX')"
+
+
+
