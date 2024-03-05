@@ -75,7 +75,33 @@ with one_ai_token as (
 , holder_balance_percent as (
     select 
         ba.holder
-        , ba.balance * 100.0 / ts.total_supply as holder_percent
+        , cast(ba.balance as double)  / ts.total_supply as hold_percent
+        , case 
+            when cr.address is null then 'EOA'
+            else 'Contract'
+        end as holder_type
     from holder_balance as ba
     cross join total_supply as ts
+    left join ethereum.creation_traces as cr 
+        on ba.holder = cr.address
 )
+
+, holder_balance_rank as (
+    select 
+        holder 
+        , get_href(get_chain_explorer_address('ethereum', holder),'scan') as link
+        , holder_type
+        , hold_percent
+        , rank() over (partition by holder_type order by hold_percent desc) as rank
+    from holder_balance_percent
+)
+
+select * from holder_balance_rank
+where holder_type = 'Contract'
+    and rank <= 5
+
+union all
+
+select * from holder_balance_rank
+where holder_type = 'EOA'
+    and rank <= 5
