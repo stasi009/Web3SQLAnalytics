@@ -26,6 +26,7 @@ with one_ai_token as (
     where td.blockchain = 'ethereum'
 )
 
+--- **************************************************** volume
 , weekly_volume as (
     select 
         week 
@@ -33,7 +34,7 @@ with one_ai_token as (
         , sum(td.amount_usd) as total_volume
         , sum(td.amount_usd) filter (where trade_direction = 'buy') as buy_volume
         , sum(td.amount_usd) filter (where trade_direction = 'sell') as sell_volume
-        
+
         , approx_distinct(td.trader) as total_traders
         , approx_distinct(td.trader) filter (where trade_direction = 'buy') as total_buyers
         , approx_distinct(td.trader) filter (where trade_direction = 'sell') as total_sellers
@@ -41,6 +42,7 @@ with one_ai_token as (
     group by 1
 )
 
+--- **************************************************** price
 , valid_prices as (
     select 
         p.minute
@@ -75,6 +77,23 @@ with one_ai_token as (
     where rn = 1
 )
 
+--- **************************************************** new users
+, trader_first_week as (-- each trader's first trading week
+    select 
+        trader
+        , min(week) as first_trade_week
+    from trades
+    group by 1
+)
+
+, weekly_new_traders as (
+    select 
+        first_trade_week as week 
+        , count(trader) as new_traders
+    from trader_first_week
+    group by 1
+)
+
 select 
     week 
 
@@ -87,7 +106,11 @@ select
     , -1 * vol.total_sellers as total_sellers 
 
     , wp.price
+    , nu.new_traders
+    
 from weekly_volume as vol
 inner join weekly_last_price wp
+    using (week)
+inner join weekly_new_traders nu
     using (week)
 order by 1
