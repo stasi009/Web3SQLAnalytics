@@ -66,6 +66,7 @@ with mint as (
         select * from out_flow
     )
     group by 1,2,3
+    having sum(value_adjdec) > 0
 )
 
 , holder_balance_percent as (
@@ -85,3 +86,4 @@ select
     , sum(power(holder_percent,2)) as hhi
 from holder_balance_percent
 group by 1
+order by 2 desc
