@@ -35,9 +35,12 @@ with one_ai_token as (
         , sum(td.amount_usd) filter (where trade_direction = 'buy') as buy_volume
         , sum(td.amount_usd) filter (where trade_direction = 'sell') as sell_volume
 
-        , approx_distinct(td.trader) as total_traders
-        , approx_distinct(td.trader) filter (where trade_direction = 'buy') as total_buyers
-        , approx_distinct(td.trader) filter (where trade_direction = 'sell') as total_sellers
+        -- xxx approx_distinct(td.trader) as total_traders
+        -- normally, we can use approx_distinct to speed up calculation, however since we need to compare total users with old users
+        -- and new users are precisely counted, an approximate total number may not match the precise new_traders count (even new traders > total traders)
+        , count(distinct td.trader) as total_traders
+        , count(distinct td.trader) filter (where trade_direction = 'buy') as total_buyers
+        , count(distinct td.trader) filter (where trade_direction = 'sell') as total_sellers
     from trades td
     group by 1
 )
@@ -106,8 +109,10 @@ select
     , -1 * vol.total_sellers as total_sellers 
 
     , wp.price
+
     , nu.new_traders
-    
+    , vol.total_traders - nu.new_traders as old_traders
+
 from weekly_volume as vol
 inner join weekly_last_price wp
     using (week)
