@@ -97,6 +97,7 @@ with one_ai_token as (
     group by 1
 )
 
+--- **************************************************** MAIN
 select 
     week 
 
