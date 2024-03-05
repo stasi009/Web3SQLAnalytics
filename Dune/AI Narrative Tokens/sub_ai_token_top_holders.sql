@@ -6,7 +6,8 @@ with one_ai_token as (
         , launch_date
         , decimals
     from query_3486591 -- ai token list
-    where symbol = '{{symbol}}'
+    -- have to change to all lower case, because Dune Query a Query cannot accept Upper Case
+    where lower(symbol) = lower('{{symbol}}')
 )
 
 , aitoken_token_transfer as (
@@ -131,3 +132,10 @@ from (
         and rank <= 5
 )
 order by hold_percent desc
+
+-- select * from "query_3491330(symbol='WLD')"
+-- select * from "query_3491330(symbol='RNDR')"
+-- select * from "query_3491330(symbol='VRA')"
+-- select * from "query_3491330(symbol='LPT')"
+-- select * from "query_3491330(symbol='FET')"
+-- select * from "query_3491330(symbol='AGIX')"
