@@ -11,9 +11,9 @@ with latest_price as (
         on ait.token_address = p.contract_address
         and ait.symbol = p.symbol
     where p.blockchain = 'ethereum'
-),
+)
 
-mint as (
+, mint as (
     select 
         block_time
         , token_name
