@@ -18,6 +18,6 @@ select
     , ait.symbol
     , ait.token_address
 from query_3486591 ait -- ai token list
-cross join ws
+cross join ws -- 让每个token都有一条完整的时序
 
 
