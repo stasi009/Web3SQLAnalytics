@@ -123,6 +123,7 @@ inner join weekly_new_traders nu
 order by 1
 
 -- select * from "query_3490600(symbol='WLD')"
+-- select * from "query_3490600(symbol='INJ')"
 -- select * from "query_3490600(symbol='RNDR')"
 -- select * from "query_3490600(symbol='VRA')"
 -- select * from "query_3490600(symbol='LPT')"

@@ -134,6 +134,7 @@ from (
 order by hold_percent desc
 
 -- select * from "query_3491330(symbol='WLD')"
+-- select * from "query_3491330(symbol='INJ')"
 -- select * from "query_3491330(symbol='RNDR')"
 -- select * from "query_3491330(symbol='VRA')"
 -- select * from "query_3491330(symbol='LPT')"
