@@ -18,7 +18,7 @@ with group_stats_by_day_market as (
 
         sum(royalty_fee_amount_usd) as total_royalty_fee,
         sum(royalty_fee_amount_usd * is_wash_trade) as total_wash_royalty_fee
-    from "query_3445248(backdays='90')" q 
+    from "query_3445248(backdays='90')" q -- detect_wash_trades
     group by 1,2
 )
 

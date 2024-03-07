@@ -17,7 +17,7 @@ with group_stats_by_marketplace as (
 
         sum(royalty_fee_amount_usd) as royalty_fee,
         sum(royalty_fee_amount_usd * is_wash_trade) as wash_royalty_fee
-    from query_3445248 q 
+    from query_3445248 q -- detect_wash_trades
     group by 1
 )
 
