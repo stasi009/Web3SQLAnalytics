@@ -54,9 +54,8 @@ with ethreum_send_txn as (-- 由EOA主动向arbitrum bridge发起的transfer
         , ar.*
     from ethreum_send_txn est 
     inner join arbitrum_recv_traces ar  
-        on ar.recv_time between est.send_time and est.send_time + interval '2' minute 
-        and ar.recv_amount > est.send_amount * 0.8 -- 设想最多交20%的手续费 
-        and ar.recv_amount < est.send_amount --不用between，因为不想包含两个bound
+        on ar.recv_time between est.send_time and est.send_time + interval '5' minute 
+        and ar.recv_amount between est.send_amount * 0.8 and est.send_amount * 1.1
     order by est.send_time
 )
 
