@@ -1,4 +1,12 @@
 
+-- 这个query回答这样的问题：
+-- 如果我在ethereum上向Arbitrum Delayed Inbox转移eth,想把它们转移到arbitrum上去
+-- arbitrum上的eth是从哪里来的？
+-- query本身并不能准确回答这一问题，只能缩小范围，再人为排查，答案是：通过
+-- 0x80c67432656d59144ceff962e8faf8926599bcf8	Orbiter Finance: Bridge	
+-- 0xe4edb277e41dc89ab076a1f049f4a3efa700bce8	Orbiter Finance: Bridge 3
+-- 这两个地址发送到arbitrum链上来的
+
 with ethreum_send_txn as (-- 由EOA主动向arbitrum bridge发起的transfer
     select 
         block_time as send_time
