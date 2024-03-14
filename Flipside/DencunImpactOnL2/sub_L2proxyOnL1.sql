@@ -1,6 +1,7 @@
 
 with L2proxyOnL1(address, name, l2chain) as (
     values
+
     (0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef, 'Arbitrum: Sequencer Inbox'), 
     (0x51de512aa5dfb02143a91c6f772261623ae64564, 'Arbitrum: Validator1'),
     (0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6, 'Arbitrum: Sequencer Inbox NITRO'),
@@ -42,4 +43,15 @@ with L2proxyOnL1(address, name, l2chain) as (
     (0xF6080D9fbEEbcd44D89aFfBFd42F098cbFf92816, 'StarkNet: Starkgate USDC Bridge'), 
     (0xbb3400F107804DFB482565FF1Ec8D8aE66747605, 'StarkNet: Starkgate USDT Bridge'), 
     (0xFD14567eaf9ba941cB8c8a94eEC14831ca7fD1b4, 'StarkNet: Sharp Blockchain writer'), 
+
+    (0xFf00000000000000000000000000000000008453, 'Base: Nullifier'), 
+    (0x642229f238fb9dE03374Be34B0eD8D9De80752c5, 'Base: Proposer'), 
+    (0x56315b90c40730925ec5485cf004d835058518A0, 'Base: L2OutputOracle'), 
+    (0x49048044D57e1C92A77f79988d21Fa8fAF74E97e, 'Base: OptimismPortal'), 
+    (0x608d94945A64503E642E6370Ec598e519a2C1E53, 'Base: L1ERC721Bridge'), 
+    (0x866E82a600A1414e583f7F13623F1aC5d58b0Afa, 'Base: L1CrossDomainMessenger'), 
 )
+
+
+ 
+
