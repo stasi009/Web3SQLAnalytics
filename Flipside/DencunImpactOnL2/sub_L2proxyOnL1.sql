@@ -1,5 +1,5 @@
 
-with L2proxyOnL1(address, name, l2chain) as (
+with L2proxyOnL1(address, name) as (
     values
 
     (0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef, 'Arbitrum: Sequencer Inbox'), 
@@ -22,8 +22,8 @@ with L2proxyOnL1(address, name, l2chain) as (
     (0xda7357bBCe5e8C616Bc7B0C3C86f0C71c5b4EaBb, 'ZkSync Lite: ZkSync Old Operator'),
 
     (0x4e4943346848c4867F81dFb37c4cA9C5715A7828, 'ZkSync ERA: MultiSig'),
-    (0x112200EaA6d57120c86B8b51a8b6049d56B82211, 'ZkSync ERA : Active Validator OL'),
-    (0x3527439923a63F8C13CF72b8Fe80a77f6e572092, 'ZkSync ERA : Active Validator NE'),
+    (0x112200EaA6d57120c86B8b51a8b6049d56B82211, 'ZkSync ERA: Active Validator OL'),
+    (0x3527439923a63F8C13CF72b8Fe80a77f6e572092, 'ZkSync ERA: Active Validator NE'),
     (0x32400084C286CF3E17e7B677ea9583e60a000324, 'ZkSync ERA: Diamond Proxy'),
     (0x3dB52cE065f728011Ac6732222270b3F2360d919, 'ZkSync ERA: Validator Timelock OL'),
     (0x57891966931Eb4Bb6FB81430E6cE0A03AAbDe063, 'ZkSync ERA: ERC 20 Bridge'),
@@ -51,13 +51,13 @@ with L2proxyOnL1(address, name, l2chain) as (
     (0x608d94945A64503E642E6370Ec598e519a2C1E53, 'Base: L1ERC721Bridge'), 
     (0x866E82a600A1414e583f7F13623F1aC5d58b0Afa, 'Base: L1CrossDomainMessenger'), 
 
-    (0xcF2898225ED05Be911D3709d9417e86E0b4Cfc8f, 'Scroll Sequencer 1'),
-    (0x2ce8B4A516ebBc8B425764a867B742F76C2244c7, 'Scroll Sequencer 2'),
-    (0x356483dC32B004f32Ea0Ce58F7F88879886e9074, 'Scroll Proposer 1'),
-    (0x69d79Fc4Ae89E4DA80D719e26a435621F75B7f06, 'Scroll Proposer 2'),
-    (0xa13BAF47339d63B743e7Da8741db5456DAc1E556, 'Scroll Chain'),
-    (0x6774Bcbd5ceCeF1336b5300fb5186a12DDD8b367, 'Scroll Messanger'),
-    (0xF8B1378579659D8F7EE5f3C929c2f3E332E41Fd6, 'Scroll L1gatewayRouter'),
+    (0xcF2898225ED05Be911D3709d9417e86E0b4Cfc8f, 'Scroll: Sequencer 1'),
+    (0x2ce8B4A516ebBc8B425764a867B742F76C2244c7, 'Scroll: Sequencer 2'),
+    (0x356483dC32B004f32Ea0Ce58F7F88879886e9074, 'Scroll: Proposer 1'),
+    (0x69d79Fc4Ae89E4DA80D719e26a435621F75B7f06, 'Scroll: Proposer 2'),
+    (0xa13BAF47339d63B743e7Da8741db5456DAc1E556, 'Scroll: Chain'),
+    (0x6774Bcbd5ceCeF1336b5300fb5186a12DDD8b367, 'Scroll: Messanger'),
+    (0xF8B1378579659D8F7EE5f3C929c2f3E332E41Fd6, 'Scroll: L1gatewayRouter'),
 
     (0x415c8893D514F9BC5211d36eEDA4183226b84AA7, 'Blast: Sequencer'),
     (0x082b616Ec99167B2FEdee053F07db6795D4dA821, 'Blast: Proposer'),
