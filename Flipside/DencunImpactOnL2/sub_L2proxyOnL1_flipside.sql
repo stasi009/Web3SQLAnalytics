@@ -74,5 +74,5 @@ with L2proxyOnL1 as (
 select 
     lower(address) as address
     , name
-    , split(name,':')[1] as l2chain
+    , split(name,':')[0] as l2chain -- !! Snowflake array index starts from 0 !!
 from L2proxyOnL1
