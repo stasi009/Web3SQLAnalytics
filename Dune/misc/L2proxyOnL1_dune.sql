@@ -65,6 +65,11 @@ with L2proxyOnL1(address, name) as (
     (0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115, 'Blast: L1 standard bridge'),
     (0x697402166Fbf2F22E970df8a6486Ef171dbfc524, 'Blast: L1 Blast Bridge'),
     (0x98078db053902644191f93988341E31289E1C8FE, 'Blast: Yeld Manager'),
-    (0xa230285d5683C74935aD14c446e137c8c8828438, 'Blast: USD Yeld Manager'),
+    (0xa230285d5683C74935aD14c446e137c8c8828438, 'Blast: USD Yeld Manager')
 )
 
+select 
+    address 
+    , name
+    , split(name,':')[1] as l2chain
+from L2proxyOnL1
