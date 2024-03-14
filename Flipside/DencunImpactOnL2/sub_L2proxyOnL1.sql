@@ -50,8 +50,21 @@ with L2proxyOnL1(address, name, l2chain) as (
     (0x49048044D57e1C92A77f79988d21Fa8fAF74E97e, 'Base: OptimismPortal'), 
     (0x608d94945A64503E642E6370Ec598e519a2C1E53, 'Base: L1ERC721Bridge'), 
     (0x866E82a600A1414e583f7F13623F1aC5d58b0Afa, 'Base: L1CrossDomainMessenger'), 
+
+    (0xcF2898225ED05Be911D3709d9417e86E0b4Cfc8f, 'Scroll Sequencer 1'),
+    (0x2ce8B4A516ebBc8B425764a867B742F76C2244c7, 'Scroll Sequencer 2'),
+    (0x356483dC32B004f32Ea0Ce58F7F88879886e9074, 'Scroll Proposer 1'),
+    (0x69d79Fc4Ae89E4DA80D719e26a435621F75B7f06, 'Scroll Proposer 2'),
+    (0xa13BAF47339d63B743e7Da8741db5456DAc1E556, 'Scroll Chain'),
+    (0x6774Bcbd5ceCeF1336b5300fb5186a12DDD8b367, 'Scroll Messanger'),
+    (0xF8B1378579659D8F7EE5f3C929c2f3E332E41Fd6, 'Scroll L1gatewayRouter'),
+
+    (0x415c8893D514F9BC5211d36eEDA4183226b84AA7, 'Blast: Sequencer'),
+    (0x082b616Ec99167B2FEdee053F07db6795D4dA821, 'Blast: Proposer'),
+    (0x826D1B0D4111Ad9146Eb8941D7Ca2B6a44215c76, 'Blast: L2 Output Contract'),
+    (0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115, 'Blast: L1 standard bridge'),
+    (0x697402166Fbf2F22E970df8a6486Ef171dbfc524, 'Blast: L1 Blast Bridge'),
+    (0x98078db053902644191f93988341E31289E1C8FE, 'Blast: Yeld Manager'),
+    (0xa230285d5683C74935aD14c446e137c8c8828438, 'Blast: USD Yeld Manager'),
 )
-
-
- 
 
