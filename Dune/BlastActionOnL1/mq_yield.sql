@@ -14,6 +14,8 @@ with daily_prices as (
         yp.block_date
         , yp.yield_concurrency
 
+        , avg(p.avg_price) as avg_price -- 其实一天之内一个yield_concurrency所有avg_price肯定相同，这里再取avg只不过为了取唯一
+
         , sum(yp.yield) as daily_yield -- can be negative
         , sum(yp.yield * p.avg_price) as daily_yield_usd 
 
@@ -29,5 +31,25 @@ with daily_prices as (
     group by 1,2
 )
 
-select *  
-from daily_yield_report_with_usd
+select 
+    block_date
+    , yield_concurrency
+
+    , avg_price -- 其实一天之内一个yield_concurrency所有avg_price肯定相同，这里再取avg只不过为了取唯一
+
+    , daily_yield -- can be negative
+    , daily_yield_usd 
+    , sum(daily_yield) over (partition by yield_concurrency order by block_date) as total_yield
+    , (sum(daily_yield) over (partition by yield_concurrency order by block_date))*avg_price as total_yield_usd
+
+    , daily_insurance_paid
+    , daily_insurance_paid_usd
+
+    , daily_insurance_withdraw  
+    , daily_insurance_withdraw_usd  
+
+    , sum(daily_insurance_paid - daily_insurance_withdraw) over (partition by yield_concurrency order by block_date) as total_net_insurance
+    , (sum(daily_insurance_paid - daily_insurance_withdraw) over (partition by yield_concurrency order by block_date)*avg_price as total_net_insurance_usd
+
+from daily_yield_report_with_usd dyp
+order by 1
