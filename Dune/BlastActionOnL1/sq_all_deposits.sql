@@ -9,7 +9,7 @@ with Event_ETHBridgeInitiated as (
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x2849b43074093a05396b6f2a937dee8565b15a48a7b3d4bffb732a5017380af5 -- ETHBridgeInitiated
-        and block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+        and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
 
 , Event_ERC20BridgeInitiated_stETH as (
@@ -25,7 +25,7 @@ with Event_ETHBridgeInitiated as (
         and topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
         and varbinary_ltrim(topic1) = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 -- local token is stETH
         and varbinary_ltrim(topic2) = 0x -- 说明topic2全0，表明在L2 chain上存储的是native ETH
-        and block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+        and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
 
 , Event_ERC20BridgeInitiated_StableCoin as (
@@ -43,7 +43,7 @@ with Event_ETHBridgeInitiated as (
         and log.topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
         and varbinary_ltrim(log.topic2) = 0x4300000000000000000000000000000000000003 -- USDB on blast L2
         and tkinfo.blockchain = 'ethereum'
-        and log.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+        and log.block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
 
 , All_Deposit as (
