@@ -24,7 +24,7 @@ with daily_prices as (
 
         , sum(yp.insuranceWithdrawn) as daily_insurance_withdraw  
         , sum(yp.insuranceWithdrawn * p.avg_price) as daily_insurance_withdraw_usd  
-    from queries_3528338 yp -- sq_yield.sql
+    from query_3528338 yp -- sq_yield.sql
     inner join daily_prices p 
         on yp.block_date = p.block_date
         and yp.price_token = p.contract_address
