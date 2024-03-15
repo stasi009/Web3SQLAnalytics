@@ -46,10 +46,8 @@ with Event_ETHBridgeInitiated as (
         and log.block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
 
-, All_Deposit as (
-    select * from Event_ETHBridgeInitiated
-    union all 
-    select * from Event_ERC20BridgeInitiated_stETH
-    union all
-    select * from Event_ERC20BridgeInitiated_StableCoin
-)
+select * from Event_ETHBridgeInitiated
+union all 
+select * from Event_ERC20BridgeInitiated_stETH
+union all
+select * from Event_ERC20BridgeInitiated_StableCoin
