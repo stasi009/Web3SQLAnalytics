@@ -1,6 +1,5 @@
-
 select 
-    block_date,
+    block_date
     , tx_hash
 
     , case 
