@@ -7,8 +7,7 @@ with Event_ETHBridgeInitiated as (
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x2849b43074093a05396b6f2a937dee8565b15a48a7b3d4bffb732a5017380af5 -- ETHBridgeInitiated
-        and block_date = date '2024-03-11' 
-        and tx_hash = 0x877860dd5bb0912d23072e50b50ca07dc8233b8b3164d7b098212414cc89ec49
+        and block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
 )
 
 , Event_ERC20BridgeInitiated_stETH as (
@@ -21,9 +20,8 @@ with Event_ETHBridgeInitiated as (
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
-        and block_date = date '2024-03-11' 
-        and tx_hash = 0xa09595ea792df62cd28749a97b7a53bb5ce7ed2e82e4b66fcab006278d81b6a9
         and varbinary_ltrim(topic2) = 0x -- 说明topic2全0，表明在L2 chain上存储的是native ETH
+        and block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
 )
 
 , Event_ERC20BridgeInitiated_StableCoin as (
@@ -36,6 +34,5 @@ with Event_ETHBridgeInitiated as (
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
-        and block_date = date '2024-03-11' 
-        and tx_hash = 0xf94091a6c70989cf387e391a436be70f1ce4035fcddf4b887edf8ddf5cc00832
+        and block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
 )
