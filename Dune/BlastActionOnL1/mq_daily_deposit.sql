@@ -4,8 +4,9 @@ with Event_ETHBridgeInitiated as (
         block_date
         , tx_hash 
         , 'ETH' as token
+        , 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 as price_token -- use WETH to query price
         , varbinary_ltrim(topic1) as sender
-        , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
+        , varbinary_to_uint256(varbinary_substring(data,1,32))/1e18 as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x2849b43074093a05396b6f2a937dee8565b15a48a7b3d4bffb732a5017380af5 -- ETHBridgeInitiated
@@ -17,8 +18,9 @@ with Event_ETHBridgeInitiated as (
         block_date 
         , tx_hash
         , 'stETH' as token
+        , 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 as price_token -- use WETH to query price
         , varbinary_ltrim(topic3) as sender
-        , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as amount
+        , varbinary_to_uint256(varbinary_substring(data,1+32,32))/1e18 as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
@@ -29,19 +31,20 @@ with Event_ETHBridgeInitiated as (
 
 , Event_ERC20BridgeInitiated_StableCoin as (
     select 
-        block_date
-        , tx_hash
+        log.block_date
+        , log.tx_hash
         , coalesce(tkinfo.symbol,'other stablecoin') as token 
-        , varbinary_ltrim(topic3) as sender
-        , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as amount
-    from ethereum.logs
+        , tkinfo.contract_address as price_token
+        , varbinary_ltrim(log.topic3) as sender
+        , varbinary_to_uint256(varbinary_substring(log.data,1+32,32))/1e18 as amount -- DAI and USDB both 18 decimals
+    from ethereum.logs log
     left join tokens.erc20 tkinfo
-        on varbinary_ltrim(topic1) = tkinfo.contract_address -- match on local token info
-    where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
-        and topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
-        and varbinary_ltrim(topic2) = 0x4300000000000000000000000000000000000003 -- USDB on blast L2
+        on varbinary_ltrim(log.topic1) = tkinfo.contract_address -- match on local token address
+    where log.contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
+        and log.topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
+        and varbinary_ltrim(log.topic2) = 0x4300000000000000000000000000000000000003 -- USDB on blast L2
         and tkinfo.blockchain = 'ethereum'
-        and block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+        and log.block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
 )
 
 , All_Deposit as (
@@ -52,5 +55,26 @@ with Event_ETHBridgeInitiated as (
     select * from Event_ERC20BridgeInitiated_StableCoin
 )
 
-select * from All_Deposit
-limit 100
+, daily_prices as (
+    select 
+        date_trunc('day',minute) as block_date
+        , contract_address 
+        , avg(price) as avg_price   
+    from prices.usd
+    where blockchain = 'ethereum'
+    group by 1,2
+)
+
+select 
+    de.block_date
+    , de.token
+    , count(de.tx_hash) as num_deposit
+    , approx_distinct(de.sender) as num_depositors
+    , sum(de.amount) as deposit_amount
+    , sum(de.amount * p.avg_price) as deposit_amount_usd
+from All_Deposit de
+inner join daily_prices p
+    on de.block_date = p.block_date 
+    and de.price_token = p.contract_address
+group by 1,2
+order by 1,2
