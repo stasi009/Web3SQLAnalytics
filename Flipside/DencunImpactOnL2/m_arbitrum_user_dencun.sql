@@ -33,8 +33,10 @@ with first_txn_day as (
 select 
     *
     , case 
-        when day <= date '2024-03-12' then 'Before Dencun' -- upgrade happen at '2024-03-13 13:55:59'
-        else 'After Dencun'
+        when day <= '2024-03-13 13:55:59'::date - interval '1 day' then 'Before Dencun'
+        when day <= '2024-03-14 14:50'::date - interval '1 day' then 'Not Active On Arbitrum'
+        else 'Dencun Active On Arbitrum'
     end as dencun_flag
+
 from daily_user_nums
 order by day

@@ -41,7 +41,8 @@ select
 
     , case 
         when hour <= timestamp '2024-03-13 13:55:59' then 'Before Dencun'
-        else 'After Dencun'
+        when hour <= timestamp '2024-03-14 14:50' then 'Not Active On Arbitrum'
+        else 'Dencun Active On Arbitrum'
     end as dencun_flag
     
     , l1.num_txn as l1_num_txn
