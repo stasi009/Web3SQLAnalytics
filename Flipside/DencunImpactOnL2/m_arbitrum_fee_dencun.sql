@@ -1,20 +1,37 @@
 
-with arbitrum_fee_on_L1 as (
+with arbitrum_L1_fee as (
     select 
         date_trunc('hour',txns.block_timestamp) as hour 
         
         , count(txns.tx_hash) as num_txn
 
         , avg(gas_used) as avg_gas_used
-        , avg(tx_fee) as avg_tx_fee_eth
+        , avg(tx_fee) as avg_tx_fee
 
-        , APPROX_PERCENTILE(gas_used,0.5) as median_gas_used
-        , APPROX_PERCENTILE(tx_fee,0.5) as median_tx_fee_eth
+        , sum(gas_used) as sum_gas_used
+        , sum(tx_fee) as sum_tx_fee
 
-        , avg(gas_price) as avg_gas_price_gwei
     from ethereum.core.fact_transactions txns
     where txns.to_address = lower('0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6') -- 'Arbitrum: Sequencer Inbox'
         and txns.block_timestamp::date >= '2024-03-12'
+        and txns.block_timestamp < date_trunc('hour',current_timestamp) -- reduce impact of incomplete hour
+    group by 1
+)
+
+, arbitrum_L2_fee as (
+    select 
+        date_trunc('hour',txns.block_timestamp) as hour 
+        
+        , count(txns.tx_hash) as num_txn
+
+        , avg(gas_used) as avg_gas_used
+        , avg(tx_fee) as avg_tx_fee
+
+        , sum(gas_used) as sum_gas_used
+        , sum(tx_fee) as sum_tx_fee
+
+    from arbitrum.core.fact_transactions txns
+    where txns.block_timestamp::date >= '2024-03-12'
         and txns.block_timestamp < date_trunc('hour',current_timestamp) -- reduce impact of incomplete hour
     group by 1
 )
