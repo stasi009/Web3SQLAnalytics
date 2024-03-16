@@ -36,12 +36,31 @@ with arbitrum_L1_fee as (
     group by 1
 )
 
-
 select 
-    *
+    hour  
+
     , case 
         when hour <= timestamp '2024-03-13 13:55:59' then 'Before Dencun'
         else 'After Dencun'
     end as dencun_flag
-from arbitrum_fee_on_L1
-order by hour
+    
+    , l1.num_txn as l1_num_txn
+    , l1.avg_gas_used as l1_avg_gas_used
+    , l1.avg_tx_fee as l1_avg_tx_fee
+    , l1.sum_gas_used as l1_sum_gas_used
+    , l1.sum_tx_fee as l1_sum_tx_fee
+
+    , l2.num_txn as l2_num_txn
+    , l2.avg_gas_used as l2_avg_gas_used
+    , l2.avg_tx_fee as l2_avg_tx_fee
+    , l2.sum_gas_used as l2_sum_gas_used
+    , l2.sum_tx_fee as l2_sum_tx_fee
+
+    , (l2_sum_tx_fee - l1_sum_tx_fee) as profit
+
+from arbitrum_L1_fee l1 
+inner join arbitrum_L2_fee l2 
+    using (hour)
+order by 1
+
+
