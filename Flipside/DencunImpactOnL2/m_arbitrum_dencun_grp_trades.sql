@@ -5,7 +5,8 @@ with dex_trades as (
         , count(tx_hash) as num_trades
         -- , sum(amount_in_usd + amount_out_usd)/2 as trade_volume
     from arbitrum.defi.ez_dex_swaps
-    where block_timestamp>= '2024-03-10'
+    where txns.block_timestamp >= '2024-03-10'
+        and txns.block_timestamp < date_trunc('hour',current_timestamp) -- reduce impact of incomplete hour
     group by 1
 )
 
@@ -15,7 +16,8 @@ with dex_trades as (
         , count(tx_hash) as num_trades
         -- , sum(amount_usd) as trade_volume
     from arbitrum.defi.ez_lending_borrows
-    where block_timestamp>= '2024-03-10'
+    where txns.block_timestamp >= '2024-03-10'
+        and txns.block_timestamp < date_trunc('hour',current_timestamp) -- reduce impact of incomplete hour
     group by 1
 )
 
@@ -25,7 +27,8 @@ with dex_trades as (
         , count(tx_hash) as num_trades -- 一次tx中可能有多笔交易，所以这里也不必去重
         -- , sum(price_usd) as trade_volume
     from arbitrum.nft.ez_nft_sales
-    where block_timestamp>= '2024-03-10'
+    where txns.block_timestamp >= '2024-03-10'
+        and txns.block_timestamp < date_trunc('hour',current_timestamp) -- reduce impact of incomplete hour
     group by 1
 )
 
