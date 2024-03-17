@@ -67,14 +67,15 @@ select
     end as dencun_flag
 
     , avg(l1.num_txn) as "Hourly Txns on L1"
-    , sum(l1.hourly_gas_used) / count(hour) as "Hourly Usd Gas on L1"
-    , sum(l1.hourly_tx_fee) / count(hour) as "Hourly Fee on L1"
+    , avg(l1.hourly_gas_used) as "Hourly Usd Gas on L1"
+    , avg(l1.hourly_tx_fee) as "Hourly Fee on L1"
 
     , avg(l2.num_txn) as "Hourly Avg Txns on L2"
-    , sum(l2.hourly_gas_used) / count(hour) as "Hourly Usd Gas on L2"
-    , sum(l2.hourly_tx_fee) / count(hour) as "Hourly Fee on L2"
+    , avg(l2.hourly_gas_used) as "Hourly Usd Gas on L2"
+    , avg(l2.hourly_tx_fee)  as "Hourly Fee on L2"
 
-    , sum(l2.hourly_tx_fee - l1.hourly_tx_fee) / count(hour) as "Hourly Profit"
+    -- , avg(l2.hourly_tx_fee - l1.hourly_tx_fee) as "Hourly Profit"
+    , median(l2.hourly_tx_fee - l1.hourly_tx_fee) as "Hourly Profit (Median)"
 
     , avg(l2dex.hourly_trades) as "Hourly DEX Trades on L2"
     , avg(l2lend.hourly_trades) as "Hourly Lending Trades on L2"
