@@ -60,29 +60,64 @@ with arbitrum_L1_fee as (
     group by 1
 )
 
-select 
-    case 
-        when hour <= timestamp '2024-03-14 14:50' then 'Before Active On Arbitrum'
-        else 'Dencun Active On Arbitrum'
-    end as dencun_flag
+, before_after_metrics as (
+    select 
+        case 
+            when hour <= timestamp '2024-03-14 14:50' then false
+            else true
+        end as after_dencun
 
-    , avg(l1.num_txn) as "Hourly Txns on L1"
-    , avg(l1.hourly_gas_used) as "Hourly Usd Gas on L1"
-    , avg(l1.hourly_tx_fee) as "Hourly Fee on L1"
+        , avg(l1.num_txn) as l1_hourly_txns
+        , avg(l1.hourly_gas_used) as l1_hourly_gas_usd
+        , avg(l1.hourly_tx_fee) as l1_hourly_txfee
 
-    , avg(l2.num_txn) as "Hourly Avg Txns on L2"
-    , avg(l2.hourly_gas_used) as "Hourly Usd Gas on L2"
-    , avg(l2.hourly_tx_fee)  as "Hourly Fee on L2"
+        , avg(l2.num_txn) as l2_hourly_txns
+        , avg(l2.hourly_gas_used) as l2_hourly_gas_used
+        , avg(l2.hourly_tx_fee)  as l2_hourly_txfee
 
-    -- , avg(l2.hourly_tx_fee - l1.hourly_tx_fee) as "Hourly Profit"
-    , median(l2.hourly_tx_fee - l1.hourly_tx_fee) as "Hourly Profit (Median)"
+        -- , avg(l2.hourly_tx_fee - l1.hourly_tx_fee) as "Hourly Profit"
+        , median(l2.hourly_tx_fee - l1.hourly_tx_fee) as median_hourly_profit
 
-    , avg(l2dex.hourly_trades) as "Hourly DEX Trades on L2"
-    , avg(l2lend.hourly_trades) as "Hourly Lending Trades on L2"
-    , avg(l2nft.hourly_trades) as "Hourly NFT Sale Trades on L2"
-from arbitrum_L1_fee l1 
-inner join arbitrum_L2_fee l2 using (hour)
-inner join dex_trades l2dex using (hour)
-inner join lending_trades l2lend using (hour)
-inner join nft_trades l2nft using (hour)
-group by 1
+        , avg(l2dex.hourly_trades) as l2_hourly_dex_trades
+        , avg(l2lend.hourly_trades) as l2_hourly_lend_trades
+        , avg(l2nft.hourly_trades) as l2_hourly_nft_trades
+    from arbitrum_L1_fee l1 
+    inner join arbitrum_L2_fee l2 using (hour)
+    inner join dex_trades l2dex using (hour)
+    inner join lending_trades l2lend using (hour)
+    inner join nft_trades l2nft using (hour)
+    group by 1
+)
+
+, rotate_before_metrics as (
+    select 'Hourly Txns on L1' as metric, l1_hourly_txns as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly Usd Gas on L1' as metric, l1_hourly_gas_usd as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly Fee on L1' as metric, l1_hourly_txfee as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly Txns on L2' as metric, l2_hourly_txns as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly Usd Gas on L2' as metric, l2_hourly_gas_used as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly Fee on L2' as metric, l2_hourly_txfee as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly Profit (Median)' as metric, median_hourly_profit as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly DEX Trades on L2' as metric, l2_hourly_dex_trades as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly Lending Trades on L2' as metric, l2_hourly_lend_trades as "Before" from before_after_metrics where not after_dencun
+    union all
+
+    select 'Hourly NFT Trades on L2' as metric, l2_hourly_nft_trades as "Before" from before_after_metrics where not after_dencun
+)
+
+select * from rotate_before_metrics
