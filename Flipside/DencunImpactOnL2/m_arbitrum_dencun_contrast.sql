@@ -153,9 +153,9 @@ with arbitrum_L1_fee as (
 
 select 
     metric
-    , "Before"
-    , "After"
-    , ""
+    , round("Before",2) as "Before"
+    , round("After",2) as "After"
+    , round(("After" / "Before" - 1)*100,2)::string || '%' as "Change Percentage %"
 from rotate_before_metrics
 inner join rotate_after_metrics
     using (rowidx, metric)
