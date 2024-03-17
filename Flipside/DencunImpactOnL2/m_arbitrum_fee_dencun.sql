@@ -13,7 +13,7 @@ with arbitrum_L1_fee as (
 
     from ethereum.core.fact_transactions txns
     where txns.to_address = lower('0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6') -- 'Arbitrum: Sequencer Inbox'
-        and txns.block_timestamp::date >= '2024-03-12'
+        and txns.block_timestamp::date >= '2024-03-10'
         and txns.block_timestamp < date_trunc('hour',current_timestamp) -- reduce impact of incomplete hour
     group by 1
 )
@@ -31,7 +31,7 @@ with arbitrum_L1_fee as (
         , sum(tx_fee) as sum_tx_fee
 
     from arbitrum.core.fact_transactions txns
-    where txns.block_timestamp::date >= '2024-03-12'
+    where txns.block_timestamp::date >= '2024-03-10'
         and txns.block_timestamp < date_trunc('hour',current_timestamp) -- reduce impact of incomplete hour
     group by 1
 )
