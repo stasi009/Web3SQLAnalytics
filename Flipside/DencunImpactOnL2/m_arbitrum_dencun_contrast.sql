@@ -3,10 +3,6 @@ with arbitrum_L1_fee as (
         date_trunc('hour',txns.block_timestamp) as hour 
         
         , count(txns.tx_hash) as num_txn
-
-        , avg(gas_used) as avg_gas_used
-        , avg(tx_fee) as avg_tx_fee
-
         , sum(gas_used) as sum_gas_used
         , sum(tx_fee) as sum_tx_fee
 
@@ -22,10 +18,6 @@ with arbitrum_L1_fee as (
         date_trunc('hour',txns.block_timestamp) as hour 
         
         , count(txns.tx_hash) as num_txn
-
-        , avg(gas_used) as avg_gas_used
-        , avg(tx_fee) as avg_tx_fee
-
         , sum(gas_used) as sum_gas_used
         , sum(tx_fee) as sum_tx_fee
 
