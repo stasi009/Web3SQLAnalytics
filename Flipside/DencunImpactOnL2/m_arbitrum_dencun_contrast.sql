@@ -90,34 +90,73 @@ with arbitrum_L1_fee as (
 )
 
 , rotate_before_metrics as (
-    select 'Hourly Txns on L1' as metric, l1_hourly_txns as "Before" from before_after_metrics where not after_dencun
+    select 1 as rowidx, 'Hourly Txns on L1' as metric, l1_hourly_txns as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly Usd Gas on L1' as metric, l1_hourly_gas_usd as "Before" from before_after_metrics where not after_dencun
+    select 2 as rowidx, 'Hourly Usd Gas on L1' as metric, l1_hourly_gas_usd as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly Fee on L1' as metric, l1_hourly_txfee as "Before" from before_after_metrics where not after_dencun
+    select 3 as rowidx, 'Hourly Fee on L1' as metric, l1_hourly_txfee as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly Txns on L2' as metric, l2_hourly_txns as "Before" from before_after_metrics where not after_dencun
+    select 4 as rowidx, 'Hourly Txns on L2' as metric, l2_hourly_txns as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly Usd Gas on L2' as metric, l2_hourly_gas_used as "Before" from before_after_metrics where not after_dencun
+    select 5 as rowidx, 'Hourly Usd Gas on L2' as metric, l2_hourly_gas_used as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly Fee on L2' as metric, l2_hourly_txfee as "Before" from before_after_metrics where not after_dencun
+    select 6 as rowidx, 'Hourly Fee on L2' as metric, l2_hourly_txfee as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly Profit (Median)' as metric, median_hourly_profit as "Before" from before_after_metrics where not after_dencun
+    select 7 as rowidx, 'Hourly Profit (Median)' as metric, median_hourly_profit as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly DEX Trades on L2' as metric, l2_hourly_dex_trades as "Before" from before_after_metrics where not after_dencun
+    select 8 as rowidx, 'Hourly DEX Trades on L2' as metric, l2_hourly_dex_trades as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly Lending Trades on L2' as metric, l2_hourly_lend_trades as "Before" from before_after_metrics where not after_dencun
+    select 9 as rowidx, 'Hourly Lending Trades on L2' as metric, l2_hourly_lend_trades as "Before" from before_after_metrics where not after_dencun
     union all
 
-    select 'Hourly NFT Trades on L2' as metric, l2_hourly_nft_trades as "Before" from before_after_metrics where not after_dencun
+    select 10 as rowidx, 'Hourly NFT Trades on L2' as metric, l2_hourly_nft_trades as "Before" from before_after_metrics where not after_dencun
 )
 
-select * from rotate_before_metrics
+, rotate_after_metrics as (
+    select 1 as rowidx, 'Hourly Txns on L1' as metric, l1_hourly_txns as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 2 as rowidx, 'Hourly Usd Gas on L1' as metric, l1_hourly_gas_usd as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 3 as rowidx, 'Hourly Fee on L1' as metric, l1_hourly_txfee as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 4 as rowidx, 'Hourly Txns on L2' as metric, l2_hourly_txns as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 5 as rowidx, 'Hourly Usd Gas on L2' as metric, l2_hourly_gas_used as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 6 as rowidx, 'Hourly Fee on L2' as metric, l2_hourly_txfee as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 7 as rowidx, 'Hourly Profit (Median)' as metric, median_hourly_profit as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 8 as rowidx, 'Hourly DEX Trades on L2' as metric, l2_hourly_dex_trades as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 9 as rowidx, 'Hourly Lending Trades on L2' as metric, l2_hourly_lend_trades as "After" from before_after_metrics where after_dencun
+    union all
+
+    select 10 as rowidx, 'Hourly NFT Trades on L2' as metric, l2_hourly_nft_trades as "After" from before_after_metrics where after_dencun
+)
+
+select 
+    metric
+    , "Before"
+    , "After"
+    , ""
+from rotate_before_metrics
+inner join rotate_after_metrics
+    using (rowidx, metric)
+order by rowidx
