@@ -136,30 +136,30 @@ with Event_ETHBridgeInitiated as (
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
 
--- , Event_DsrYieldProvider_Claimed as (
---     -- example: https://etherscan.io/tx/0x11164c3009754aa49d3d59e5ae64e88eb6f95f87e0739417ab920a3aaecbe831#eventlog
---     select
---         block_time 
---         , tx_hash
---         -- , topic1 as provider -- 实际上就是DSR Yield Provider的id
---         , varbinary_to_uint256(varbinary_substring(data,1,32)) as claimedAmount
---         , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as expectedAmount
---     from ethereum.logs
---     where contract_address = 0x0733F618118bF420b6b604c969498ecf143681a8 -- Blast: DSR Yield Provider
---         and topic0 = 0x41628d0ba42442e4aa4fc514eeb97bb7154969e70e6678229c836f3b9732ba90 -- Claimed
---         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
--- )
+, Event_DsrYieldProvider_Claimed as (
+    -- example: https://etherscan.io/tx/0x11164c3009754aa49d3d59e5ae64e88eb6f95f87e0739417ab920a3aaecbe831#eventlog
+    select
+        block_time 
+        , tx_hash
+        -- , topic1 as provider -- 实际上就是DSR Yield Provider的id
+        , varbinary_to_uint256(varbinary_substring(data,1,32)) as claimedAmount
+        , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as expectedAmount
+    from ethereum.logs
+    where contract_address = 0x0733F618118bF420b6b604c969498ecf143681a8 -- Blast: DSR Yield Provider
+        and topic0 = 0x41628d0ba42442e4aa4fc514eeb97bb7154969e70e6678229c836f3b9732ba90 -- Claimed
+        and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+)
 
--- , Event_USDYieldManager_YieldReport as (
---     select 
---         varbinary_to_int256(varbinary_substring(data,1,32)) as yield -- not uint256, because yield can be negative
---         , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as insurancePremiumPaid
---         , varbinary_to_uint256(varbinary_substring(data,1+2*32,32)) as insuranceWithdrawn
---     from ethereum.logs
---     where contract_address = 0xa230285d5683C74935aD14c446e137c8c8828438 -- Blast: USD Yield Manager Proxy
---         and topic0 = 0x00de4b58e7863b1e3dce7259a138136239427388d53e4844f369cdee7a81dbf5 -- YieldReport
---         and block_date = date '2024-03-13' 
---         and tx_hash = 0x55766ee1cf72625691d694fdc32758efe75a2f1e1959e6d3c88d8554d794056f
--- )
+, Event_USDYieldManager_YieldReport as (
+    select 
+        varbinary_to_int256(varbinary_substring(data,1,32)) as yield -- not uint256, because yield can be negative
+        , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as insurancePremiumPaid
+        , varbinary_to_uint256(varbinary_substring(data,1+2*32,32)) as insuranceWithdrawn
+    from ethereum.logs
+    where contract_address = 0xa230285d5683C74935aD14c446e137c8c8828438 -- Blast: USD Yield Manager Proxy
+        and topic0 = 0x00de4b58e7863b1e3dce7259a138136239427388d53e4844f369cdee7a81dbf5 -- YieldReport
+        and block_date = date '2024-03-13' 
+        and tx_hash = 0x55766ee1cf72625691d694fdc32758efe75a2f1e1959e6d3c88d8554d794056f
+)
 
 select * from Event_DsrYieldProvider_Unstaked
