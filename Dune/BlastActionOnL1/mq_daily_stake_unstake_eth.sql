@@ -1,6 +1,7 @@
 with Event_ETHYieldManager_WithdrawRequested as (
     select 
         block_date
+        , 'unstake request' as action
         , tx_hash
         , tx_from as user
         -- 不能用recipient,它们不是真正的收款人，而是Blast: Optimism Portal Proxy
@@ -17,6 +18,7 @@ with Event_ETHYieldManager_WithdrawRequested as (
     -- example: https://etherscan.io/tx/0x877860dd5bb0912d23072e50b50ca07dc8233b8b3164d7b098212414cc89ec49#eventlog
     select 
         block_date
+        , 'stake ETH' as action
         , tx_hash 
         , varbinary_ltrim(topic1) as user
         , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
@@ -30,6 +32,7 @@ with Event_ETHYieldManager_WithdrawRequested as (
     -- example: https://etherscan.io/tx/0xa09595ea792df62cd28749a97b7a53bb5ce7ed2e82e4b66fcab006278d81b6a9#eventlog
     select 
         block_date 
+        , 'stake stETH' as action
         , tx_hash
         , varbinary_ltrim(topic3) as user
         , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as amount
@@ -40,3 +43,29 @@ with Event_ETHYieldManager_WithdrawRequested as (
         and varbinary_ltrim(topic2) = 0x -- 说明topic2全0，表明在L2 chain上存储的是native ETH
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
+
+, daily_stats as (
+    select 
+        block_date 
+        , action 
+        , count(tx_hash) as tx_num
+        , count(distinct user) as num_users
+        , sum(amount)/1e18 as eth_amount
+    from (
+        select * from Event_ETHYieldManager_WithdrawRequested
+        union all 
+        select * from Event_ETHBridgeInitiated
+        union all
+        select * from Event_ERC20BridgeInitiated_stETH
+    )
+    group by 1,2
+)
+
+select 
+    block_date 
+    , action 
+    , case when action = 'unstake request' then -1 else 1 end * tx_num as tx_num 
+    , case when action = 'unstake request' then -1 else 1 end * num_users as num_users
+    , case when action = 'unstake request' then -1 else 1 end * eth_amount as eth_amount
+from daily_stats
+order by 1
