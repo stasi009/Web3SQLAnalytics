@@ -26,7 +26,7 @@ with daily_staked_to_lido as (-- ETH Yield Manager Stake to Lido
 select 
     block_date
     , coalesce(daily_stake,0) as daily_stake
-    , coalesce(daily_claim,0) as daily_claim
+    , -1*coalesce(daily_claim,0) as daily_claim
     -- lido_balance: ETH Yield Manager's balance in Lido
     , sum(coalesce(daily_stake,0) - coalesce(daily_claim,0)) over (order by block_date) lido_balance
 -- sequence includes both ends
