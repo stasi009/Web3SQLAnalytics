@@ -9,6 +9,16 @@ with daily_prices as (
     group by 1,2
 )
 
+, concurrency_day_list as (
+    select 
+        day
+        , concurrency 
+    -- sequence includes both ends
+    -- start day is when blast L1 bridge is deployed
+    from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(day)
+    cross join UNNEST(ARRAY['ETH', 'USD']) AS concurrency_list(concurrency)
+)
+
 , daily_yield_report_with_usd as (
     select 
         yp.block_date
