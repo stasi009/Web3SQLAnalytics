@@ -34,7 +34,6 @@ with daily_prices as (
 select 
     block_date
     , yield_concurrency
-    , avg_price
 
     , daily_yield -- can be negative
     , daily_yield_usd 
