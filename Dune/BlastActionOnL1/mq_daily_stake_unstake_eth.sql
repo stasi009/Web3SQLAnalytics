@@ -1,29 +1,26 @@
 
-with daily_withdraw_request as (
+with Event_ETHYieldManager_WithdrawRequested as (
     select 
         block_date
-        , count(tx_hash) as num_withdraw
-        , count(distinct tx_from) as num_withdraw_users
+        , tx_hash
+        , tx_from as user
         -- 不能用recipient,它们不是真正的收款人，而是Blast: Optimism Portal Proxy
         -- , bytearray_ltrim(topic2) as requestor 
         -- , bytearray_ltrim(topic3) as recipient 
-        , sum(varbinary_to_uint256(varbinary_substring(data,1,32)))/1e18 as amount
+        , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
     from ethereum.logs
     where contract_address = 0x98078db053902644191f93988341E31289E1C8FE -- Blast: ETH Yield Manager Proxy
         and topic0 = 0x00ae2c76ca218353c7995e13a4af773a35837cb6ebb8288092d8190bcd9c8f68 -- WithdrawalRequested
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
-    group by 1
 )
 
 , Event_ETHBridgeInitiated as (
     -- example: https://etherscan.io/tx/0x877860dd5bb0912d23072e50b50ca07dc8233b8b3164d7b098212414cc89ec49#eventlog
     select 
         block_date
-        , tx_hash 
-        , 'ETH' as token
-        , 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 as price_token -- use WETH to query price
-        , varbinary_ltrim(topic1) as sender
-        , varbinary_to_uint256(varbinary_substring(data,1,32))/1e18 as amount
+        , tx_hash
+        , varbinary_ltrim(topic1) as user
+        , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x2849b43074093a05396b6f2a937dee8565b15a48a7b3d4bffb732a5017380af5 -- ETHBridgeInitiated
@@ -35,10 +32,8 @@ with daily_withdraw_request as (
     select 
         block_date 
         , tx_hash
-        , 'stETH' as token
-        , 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 as price_token -- use stETH to query price
-        , varbinary_ltrim(topic3) as sender
-        , varbinary_to_uint256(varbinary_substring(data,1+32,32))/1e18 as amount
+        , varbinary_ltrim(topic3) as user
+        , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
         and topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
