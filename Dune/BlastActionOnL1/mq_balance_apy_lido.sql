@@ -38,8 +38,8 @@ with daily_staked_to_lido as (-- ETH Yield Manager Stake to Lido
 select 
     *
     , case 
-        when lido_balance=0 then 0 
-        else cast(daily_yield as double) * 365.0/ lido_balance
+        when balance_in_lido=0 then 0 
+        else cast(daily_yield as double) * 365.0/ balance_in_lido
     end as yield_apy
 from (
     select 
@@ -48,7 +48,7 @@ from (
         , -1*coalesce(daily_claim,0) as daily_claim
         , coalesce(daily_yield,0) as daily_yield
         -- lido_balance: ETH Yield Manager's balance in Lido
-        , sum(coalesce(daily_stake,0) - coalesce(daily_claim,0)) over (order by block_date) lido_balance
+        , sum(coalesce(daily_stake,0) - coalesce(daily_claim,0)) over (order by block_date) as balance_in_lido
     -- sequence includes both ends
     -- start day is when blast L1 bridge is deployed
     from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(block_date)

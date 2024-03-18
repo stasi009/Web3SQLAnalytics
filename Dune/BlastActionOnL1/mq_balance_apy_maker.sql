@@ -37,8 +37,8 @@ with daily_stake_to_maker as (
 select 
     *
     , case 
-        when maker_balance=0 then 0 
-        else cast(daily_yield as double) * 365.0/ maker_balance
+        when balance_in_maker=0 then 0 
+        else cast(daily_yield as double) * 365.0/ balance_in_maker
     end as yield_apy
 from (
     select 
@@ -46,8 +46,8 @@ from (
         , coalesce(daily_stake,0) as daily_stake
         , -1*coalesce(daily_claim,0) as daily_claim
         , coalesce(daily_yield,0) as daily_yield
-        -- maker_balance: DSR Yield Manager's balance in Maker
-        , sum(coalesce(daily_stake,0) - coalesce(daily_claim,0)) over (order by block_date) maker_balance
+        -- balance_in_maker: DSR Yield Manager's balance in Maker
+        , sum(coalesce(daily_stake,0) - coalesce(daily_claim,0)) over (order by block_date) as balance_in_maker
     -- sequence includes both ends
     -- start day is when blast L1 bridge is deployed
     from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(block_date)
