@@ -3,73 +3,75 @@ with daily_prices as (
     select 
         date_trunc('day',minute) as block_date
         , contract_address 
-        , avg(price) as avg_price   
+        , avg(price) as daily_price   
     from prices.usd
     where blockchain = 'ethereum'
     group by 1,2
 )
 
-, day_concurrency_list as (
+, day_currency_list as (
     select 
-        block_date
-        , yield_concurrency 
-    -- sequence includes both ends
-    -- start day is when blast L1 bridge is deployed
-    from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(block_date)
-    cross join UNNEST(ARRAY['ETH', 'USD']) AS concurrency_list(yield_concurrency)
+        *
+        , case 
+            when yield_currency='ETH' then 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 -- use WETH to query price
+            when yield_currency='USD' then 0x6B175474E89094C44Da98b954EedeAC495271d0F -- use Dai to query price
+        end as price_token
+    from (
+        select 
+            block_date
+            , yield_currency 
+        -- sequence includes both ends
+        -- start day is when blast L1 bridge is deployed
+        from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(block_date)
+        cross join UNNEST(ARRAY['ETH', 'USD']) AS currency_list(yield_currency)
+    )
 )
 
 , daily_yield_report as (
     select 
         yp.block_date
-        , yp.yield_concurrency
-
-        , avg(p.avg_price) as avg_price -- 其实一天之内一个yield_concurrency所有avg_price肯定相同，这里再取avg只不过为了取唯一
+        , yp.yield_currency
 
         , sum(yp.yield) as daily_yield -- can be negative
-        , sum(yp.yield * p.avg_price) as daily_yield_usd 
-
         , sum(yp.insurancePremiumPaid) as daily_insurance_paid
-        , sum(yp.insurancePremiumPaid * p.avg_price) as daily_insurance_paid_usd
-
         , sum(yp.insuranceWithdrawn) as daily_insurance_withdraw  
-        , sum(yp.insuranceWithdrawn * p.avg_price) as daily_insurance_withdraw_usd  
     from query_3528338 yp -- sq_yield.sql
-    inner join daily_prices p 
-        on yp.block_date = p.block_date
-        and yp.price_token = p.contract_address
     group by 1,2
 )
 
 , daily_yield_report_fill_missing as (
     select 
-        block_date
-        , yield_concurrency
+        dcl.block_date
+        , dcl.yield_currency
 
-        , coalesce(avg_price,0) as avg_price
+        , p.daily_price
 
-        , coalesce(daily_yield,0) as daily_yield
-        , coalesce(daily_yield_usd,0) as daily_yield_usd
+        , coalesce(yp.daily_yield,0) as daily_yield
+        , coalesce(yp.daily_yield,0) * p.daily_price  as daily_yield_usd
 
-        , coalesce(daily_insurance_paid,0) as daily_insurance_paid
-        , coalesce(daily_insurance_paid_usd,0) as daily_insurance_paid_usd
+        , coalesce(yp.daily_insurance_paid,0) as daily_insurance_paid
+        , coalesce(yp.daily_insurance_paid,0) * p.daily_price as daily_insurance_paid_usd
 
-        , -1*coalesce(daily_insurance_withdraw,0) as daily_insurance_withdraw
-        , -1*coalesce(daily_insurance_withdraw_usd,0) as daily_insurance_withdraw_usd
-    from day_concurrency_list dcl
+        , -1*coalesce(yp.daily_insurance_withdraw,0) as daily_insurance_withdraw
+        , -1*coalesce(yp.daily_insurance_withdraw,0) * p.daily_price as daily_insurance_withdraw_usd
+    from day_currency_list dcl
     left join daily_yield_report yp
-        using (block_date, yield_concurrency)
+        on dcl.block_date = yp.block_date
+        and dcl.yield_currency = yp.yield_currency
+    inner join daily_prices p 
+        on dcl.block_date = p.block_date
+        and dcl.price_token = p.contract_address
 )
 
 select 
-    dp.*
+    dyp.*
 
-    , sum(daily_yield) over (partition by yield_concurrency order by block_date) as total_yield
-    , (sum(daily_yield) over (partition by yield_concurrency order by block_date))*avg_price as total_yield_usd
+    , sum(daily_yield) over (partition by yield_currency order by block_date) as total_yield
+    , (sum(daily_yield) over (partition by yield_currency order by block_date))*daily_price as total_yield_usd
 
     -- withdraw value has already turn to negative
-    , sum(daily_insurance_paid + daily_insurance_withdraw) over (partition by yield_concurrency order by block_date) as total_insurance
-    , (sum(daily_insurance_paid + daily_insurance_withdraw) over (partition by yield_concurrency order by block_date))*avg_price as total_insurance_usd
+    , sum(daily_insurance_paid + daily_insurance_withdraw) over (partition by yield_currency order by block_date) as total_insurance
+    , (sum(daily_insurance_paid + daily_insurance_withdraw) over (partition by yield_currency order by block_date))*daily_price as total_insurance_usd
 
 from daily_yield_report_fill_missing dyp
 order by 1
