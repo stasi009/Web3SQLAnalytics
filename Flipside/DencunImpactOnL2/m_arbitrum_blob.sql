@@ -16,9 +16,9 @@ with arbitrum_txns_on_L1 as (
 
 select 
     hour
-    , count(tx_hash) as total_txn
-    , sum(is_blob_txn) as total_blob_txn
-    , count(tx_hash) - sum(is_blob_txn) as total_non_blob_txn
+    , count(tx_hash) as "Hourly Txns"
+    , sum(is_blob_txn) as "Hourly Blob Txns"
+    , count(tx_hash) - sum(is_blob_txn) as "Hourly Non-Blob Txns"
 from arbitrum_txns_on_L1
 group by 1
 order by 1
