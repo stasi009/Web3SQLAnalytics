@@ -43,3 +43,9 @@ with Event_ETHYieldManager_WithdrawRequested as (
         and varbinary_ltrim(topic2) = 0x -- 说明topic2全0，表明在L2 chain上存储的是native ETH
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
+
+select * from Event_ETHYieldManager_WithdrawRequested
+union all 
+select * from Event_ETHBridgeInitiated
+union all
+select * from Event_ERC20BridgeInitiated_stETH
