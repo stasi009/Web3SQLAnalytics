@@ -123,4 +123,4 @@ with Event_ETHBridgeInitiated as (
         and tx_hash = 0x55766ee1cf72625691d694fdc32758efe75a2f1e1959e6d3c88d8554d794056f
 )
 
-select * from Event_USDYieldManager_YieldReport
+select * from Event_ERC20BridgeInitiated_StableCoin

@@ -1,4 +1,5 @@
 with Event_ETHBridgeInitiated as (
+    -- example: https://etherscan.io/tx/0x877860dd5bb0912d23072e50b50ca07dc8233b8b3164d7b098212414cc89ec49#eventlog
     select 
         block_date
         , tx_hash 
@@ -13,11 +14,12 @@ with Event_ETHBridgeInitiated as (
 )
 
 , Event_ERC20BridgeInitiated_stETH as (
+    -- example: https://etherscan.io/tx/0xa09595ea792df62cd28749a97b7a53bb5ce7ed2e82e4b66fcab006278d81b6a9#eventlog
     select 
         block_date 
         , tx_hash
         , 'stETH' as token
-        , 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 as price_token -- use WETH to query price
+        , 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 as price_token -- use stETH to query price
         , varbinary_ltrim(topic3) as sender
         , varbinary_to_uint256(varbinary_substring(data,1+32,32))/1e18 as amount
     from ethereum.logs
@@ -29,6 +31,7 @@ with Event_ETHBridgeInitiated as (
 )
 
 , Event_ERC20BridgeInitiated_StableCoin as (
+    -- example: https://etherscan.io/tx/0xf94091a6c70989cf387e391a436be70f1ce4035fcddf4b887edf8ddf5cc00832#eventlog
     select 
         log.block_date
         , log.tx_hash
