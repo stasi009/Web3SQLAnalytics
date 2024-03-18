@@ -22,6 +22,18 @@ with daily_stake_to_maker as (
     group by 1
 )
 
+, daily_dai_yield as (
+    -- example: https://etherscan.io/tx/0x55766ee1cf72625691d694fdc32758efe75a2f1e1959e6d3c88d8554d794056f#eventlog
+    select 
+        block_date
+        , sum(varbinary_to_int256(varbinary_substring(data,1,32))/1e18) as daily_yield -- not uint256, because yield can be negative
+    from ethereum.logs
+    where contract_address = 0xa230285d5683C74935aD14c446e137c8c8828438 -- Blast: USD Yield Manager Proxy
+        and topic0 = 0x00de4b58e7863b1e3dce7259a138136239427388d53e4844f369cdee7a81dbf5 -- YieldReport
+        and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+    group by 1
+)
+
 select 
     block_date
     , coalesce(daily_stake,0) as daily_stake
