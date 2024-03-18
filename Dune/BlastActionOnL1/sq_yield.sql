@@ -17,7 +17,9 @@ select
     , varbinary_to_uint256(varbinary_substring(data,1+2*32,32))/1e18 as insuranceWithdrawn
 from ethereum.logs
 where contract_address in (
+        -- example: https://etherscan.io/tx/0xd55ff8f9eaf4867d126bfec77e5d7d15200d22565259f0b7e013b897ca02e92b#eventlog
         0x98078db053902644191f93988341E31289E1C8FE -- Blast: ETH Yield Manager Proxy
+        -- example: https://etherscan.io/tx/0x55766ee1cf72625691d694fdc32758efe75a2f1e1959e6d3c88d8554d794056f#eventlog
         , 0xa230285d5683C74935aD14c446e137c8c8828438 -- Blast: USD Yield Manager Proxy
         ) 
     and topic0 = 0x00de4b58e7863b1e3dce7259a138136239427388d53e4844f369cdee7a81dbf5 -- YieldReport
