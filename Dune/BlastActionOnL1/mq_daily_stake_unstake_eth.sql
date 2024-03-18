@@ -1,4 +1,3 @@
-
 with Event_ETHYieldManager_WithdrawRequested as (
     select 
         block_date
@@ -18,7 +17,7 @@ with Event_ETHYieldManager_WithdrawRequested as (
     -- example: https://etherscan.io/tx/0x877860dd5bb0912d23072e50b50ca07dc8233b8b3164d7b098212414cc89ec49#eventlog
     select 
         block_date
-        , tx_hash
+        , tx_hash 
         , varbinary_ltrim(topic1) as user
         , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
     from ethereum.logs
