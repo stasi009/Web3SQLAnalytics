@@ -7,6 +7,7 @@ with daily_stake_to_maker as (
     where contract_address = 0x0733F618118bF420b6b604c969498ecf143681a8 -- Blast: DSR Yield Provider
         and topic0 = 0xad8699b31aa71e27625c441f641b4732d76e1b7475068543aaaee79bd2c3d1f6 -- Staked
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+    group by 1
 )
 
 , daily_claim_from_maker as (
@@ -18,4 +19,17 @@ with daily_stake_to_maker as (
     where contract_address = 0x0733F618118bF420b6b604c969498ecf143681a8 -- Blast: DSR Yield Provider
         and topic0 = 0x41628d0ba42442e4aa4fc514eeb97bb7154969e70e6678229c836f3b9732ba90 -- Claimed
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+    group by 1
 )
+
+select 
+    block_date
+    , coalesce(daily_stake,0) as daily_stake
+    , -1*coalesce(daily_claim,0) as daily_claim
+    -- maker_balance: DSR Yield Manager's balance in Maker
+    , sum(coalesce(daily_stake,0) - coalesce(daily_claim,0)) over (order by block_date) maker_balance
+-- sequence includes both ends
+-- start day is when blast L1 bridge is deployed
+from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(block_date)
+left join daily_stake_to_maker stake using (block_date)
+left join daily_claim_from_maker claim using (block_date)
