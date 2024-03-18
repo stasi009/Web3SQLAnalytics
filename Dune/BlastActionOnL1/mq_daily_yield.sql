@@ -9,17 +9,17 @@ with daily_prices as (
     group by 1,2
 )
 
-, concurrency_day_list as (
+, day_concurrency_list as (
     select 
-        day
-        , concurrency 
+        block_date
+        , yield_concurrency 
     -- sequence includes both ends
     -- start day is when blast L1 bridge is deployed
-    from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(day)
-    cross join UNNEST(ARRAY['ETH', 'USD']) AS concurrency_list(concurrency)
+    from unnest(sequence(date '2024-02-24', current_date - interval '1' day, interval '1' day)) as days(block_date)
+    cross join UNNEST(ARRAY['ETH', 'USD']) AS concurrency_list(yield_concurrency)
 )
 
-, daily_yield_report_with_usd as (
+, daily_yield_report as (
     select 
         yp.block_date
         , yp.yield_concurrency
@@ -41,23 +41,35 @@ with daily_prices as (
     group by 1,2
 )
 
-select 
-    block_date
-    , yield_concurrency
+, daily_yield_report_fill_missing as (
+    select 
+        block_date
+        , yield_concurrency
 
-    , daily_yield -- can be negative
-    , daily_yield_usd 
+        , coalesce(avg_price,0) as avg_price
+
+        , coalesce(daily_yield,0) as daily_yield
+        , coalesce(daily_yield_usd,0) as daily_yield_usd
+
+        , coalesce(daily_insurance_paid,0) as daily_insurance_paid
+        , coalesce(daily_insurance_paid_usd,0) as daily_insurance_paid_usd
+
+        , -1*coalesce(daily_insurance_withdraw,0) as daily_insurance_withdraw
+        , -1*coalesce(daily_insurance_withdraw_usd,0) as daily_insurance_withdraw_usd
+    from day_concurrency_list dcl
+    left join daily_yield_report yp
+        using (block_date, yield_concurrency)
+)
+
+select 
+    dp.*
+
     , sum(daily_yield) over (partition by yield_concurrency order by block_date) as total_yield
     , (sum(daily_yield) over (partition by yield_concurrency order by block_date))*avg_price as total_yield_usd
 
-    , daily_insurance_paid
-    , daily_insurance_paid_usd
+    -- withdraw value has already turn to negative
+    , sum(daily_insurance_paid + daily_insurance_withdraw) over (partition by yield_concurrency order by block_date) as total_insurance
+    , (sum(daily_insurance_paid + daily_insurance_withdraw) over (partition by yield_concurrency order by block_date))*avg_price as total_insurance_usd
 
-    , -1*daily_insurance_withdraw as daily_insurance_withdraw
-    , -1*daily_insurance_withdraw_usd as daily_insurance_withdraw_usd
-
-    , sum(daily_insurance_paid - daily_insurance_withdraw) over (partition by yield_concurrency order by block_date) as total_insurance
-    , (sum(daily_insurance_paid - daily_insurance_withdraw) over (partition by yield_concurrency order by block_date))*avg_price as total_insurance_usd
-
-from daily_yield_report_with_usd dyp
+from daily_yield_report_fill_missing dyp
 order by 1
