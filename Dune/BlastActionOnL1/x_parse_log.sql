@@ -1,4 +1,5 @@
 
+--- ################################ deposit
 with Event_ETHBridgeInitiated as (
     select 
         varbinary_ltrim(topic1) as from_address
@@ -40,6 +41,7 @@ with Event_ETHBridgeInitiated as (
         and tx_hash = 0xf94091a6c70989cf387e391a436be70f1ce4035fcddf4b887edf8ddf5cc00832
 )
 
+--- ################################ ETH Manager 
 , Event_LidoYieldProvider_Staked as (
     select 
         topic1 as provider -- 实际上就是LidoYieldProvider的id
@@ -111,6 +113,18 @@ with Event_ETHBridgeInitiated as (
         and tx_hash = 0xd55ff8f9eaf4867d126bfec77e5d7d15200d22565259f0b7e013b897ca02e92b
 )
 
+--- ################################ USD Manager 
+, Event_DsrYieldProvider_Staked as (
+    select 
+        topic1 as provider -- 实际上就是DSR Yield Provider的id
+        , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
+    from ethereum.logs
+    where contract_address = 0x0733F618118bF420b6b604c969498ecf143681a8 -- Blast: DSR Yield Provider
+        and topic0 = 0xad8699b31aa71e27625c441f641b4732d76e1b7475068543aaaee79bd2c3d1f6 -- Staked
+        and block_date = date '2024-03-12' 
+        and tx_hash = 0x7bcd9f009a1fe9328b2222222b3331b3765c728901443b632796d6a9703d5c0a
+)
+
 , Event_USDYieldManager_YieldReport as (
     select 
         varbinary_to_int256(varbinary_substring(data,1,32)) as yield -- not uint256, because yield can be negative
@@ -123,4 +137,4 @@ with Event_ETHBridgeInitiated as (
         and tx_hash = 0x55766ee1cf72625691d694fdc32758efe75a2f1e1959e6d3c88d8554d794056f
 )
 
-select * from Event_ERC20BridgeInitiated_StableCoin
+select * from Event_DsrYieldProvider_Staked
