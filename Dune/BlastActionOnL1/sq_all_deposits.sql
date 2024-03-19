@@ -5,7 +5,8 @@ with Event_ETHBridgeInitiated as (
         , tx_hash 
         , 'ETH' as token
         , 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 as price_token -- use WETH to query price
-        , varbinary_ltrim(topic1) as sender
+        -- 不能用varbinary_ltrim(topic1) as sender，最多可能是Blast: Deposit
+        , tx_from as sender
         , varbinary_to_uint256(varbinary_substring(data,1,32))/1e18 as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
@@ -20,7 +21,8 @@ with Event_ETHBridgeInitiated as (
         , tx_hash
         , 'stETH' as token
         , 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 as price_token -- use stETH to query price
-        , varbinary_ltrim(topic3) as sender
+        -- 不能用varbinary_ltrim(topic3) as sender，最多可能是Blast: Deposit
+        , tx_from as sender
         , varbinary_to_uint256(varbinary_substring(data,1+32,32))/1e18 as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
@@ -37,7 +39,8 @@ with Event_ETHBridgeInitiated as (
         , log.tx_hash
         , coalesce(tkinfo.symbol,'other stablecoin') as token 
         , tkinfo.contract_address as price_token
-        , varbinary_ltrim(log.topic3) as sender
+        -- 不能用varbinary_ltrim(log.topic3) as sender，最多可能是Blast: Deposit
+        , tx_from as sender
         , varbinary_to_uint256(varbinary_substring(log.data,1+32,32))/1e18 as amount -- DAI and USDB both 18 decimals
     from ethereum.logs log
     left join tokens.erc20 tkinfo
