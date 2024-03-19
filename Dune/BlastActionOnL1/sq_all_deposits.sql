@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3527756
 with Event_ETHBridgeInitiated as (
     -- example: https://etherscan.io/tx/0x877860dd5bb0912d23072e50b50ca07dc8233b8b3164d7b098212414cc89ec49#eventlog
     select 

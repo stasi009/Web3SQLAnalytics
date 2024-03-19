@@ -1,8 +1,7 @@
-
+-- https://dune.com/queries/3527388
 with deposits as (
     select * 
     from query_3527756 -- sq_all_deposits
-    where block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
     where block_date >= date '{{start day}}'
 )
 
