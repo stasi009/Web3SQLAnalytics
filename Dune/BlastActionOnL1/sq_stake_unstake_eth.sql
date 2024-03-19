@@ -1,4 +1,5 @@
 with Event_ETHYieldManager_WithdrawRequested as (
+    -- example: https://etherscan.io/tx/0xf05b9a83ca40595dbb4f7aee3ae12358ffdc1c5d9d3809816c6ed0a939164470#eventlog
     select 
         block_date
         , 'unstake request' as action
