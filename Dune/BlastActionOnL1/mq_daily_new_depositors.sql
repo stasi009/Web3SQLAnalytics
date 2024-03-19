@@ -1,4 +1,4 @@
-
+-- https://dune.com/queries/3527835
 with first_deposit_day as (
     select 
         sender 
@@ -18,7 +18,7 @@ with first_deposit_day as (
     from query_3527756 de -- sq_all_deposits
     inner join first_deposit_day day1
         on de.sender = day1.sender
-    where block_date between current_date - interval '{{back_days}}' day and current_date - interval '1' day
+    where block_date >= date '{{start day}}'
 )
 
 select 

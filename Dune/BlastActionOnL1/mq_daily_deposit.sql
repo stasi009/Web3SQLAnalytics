@@ -12,7 +12,7 @@ with deposits as (
         , avg(price) as daily_price   
     from prices.usd
     where blockchain = 'ethereum'
-        and date_trunc('day',minute) >= date '{{start day}}'
+        and minute >= date '{{start day}}'
     group by 1,2
 )
 
