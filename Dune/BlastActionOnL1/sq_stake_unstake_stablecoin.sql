@@ -47,6 +47,21 @@ with Event_ETHYieldManager_WithdrawRequested as (
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
 
+, Event_ERC20BridgeInitiated_StableCoin as (
+    -- example: https://etherscan.io/tx/0xf94091a6c70989cf387e391a436be70f1ce4035fcddf4b887edf8ddf5cc00832#eventlog
+    select 
+        log.block_date
+        , 'stake stablecoin' as action
+        , tx_hash
+        , varbinary_ltrim(log.topic3) as user
+        , varbinary_to_uint256(varbinary_substring(log.data,1+32,32)) as amount -- DAI and USDB both 18 decimals
+    from ethereum.logs log
+    where log.contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
+        and log.topic0 = 0x7ff126db8024424bbfd9826e8ab82ff59136289ea440b04b39a0df1b03b9cabf -- ERC20BridgeInitiated
+        and varbinary_ltrim(log.topic2) = 0x4300000000000000000000000000000000000003 -- USDB on blast L2
+        and log.block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+)
+
 select * from Event_ETHYieldManager_WithdrawRequested
 union all 
 select * from Event_ETHBridgeInitiated
