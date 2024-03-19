@@ -1,4 +1,4 @@
-
+-- https://dune.com/queries/3535165
 with daily_prices as (
     select 
         date_trunc('day',minute) as block_date
