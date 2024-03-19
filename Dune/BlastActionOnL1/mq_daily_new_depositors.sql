@@ -19,6 +19,7 @@ with first_deposit_day as (
     inner join first_deposit_day day1
         on de.sender = day1.sender
     where block_date >= date '{{start day}}'
+        and block_date < current_date -- avoid incomplete day
 )
 
 select 

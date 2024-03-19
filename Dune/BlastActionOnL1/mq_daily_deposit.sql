@@ -3,6 +3,7 @@ with deposits as (
     select * 
     from query_3527756 -- sq_all_deposits
     where block_date >= date '{{start day}}'
+        and block_date < current_date -- avoid incomplete day
 )
 
 , daily_prices as (
