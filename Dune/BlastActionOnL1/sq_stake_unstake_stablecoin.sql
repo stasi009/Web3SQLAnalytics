@@ -7,7 +7,7 @@ with Event_UsdYieldManager_WithdrawRequested as (
         , tx_from as user
         -- 与ETHYieldManager_WithdrawRequested不同，这里的recipient倒是真正收款人，与tx_from相同
         -- , bytearray_ltrim(topic3) as recipient 
-        , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
+        , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount -- dai或usdb的数量
     from ethereum.logs
     where contract_address = 0xa230285d5683C74935aD14c446e137c8c8828438 -- Blast: USD Yield Manager Proxy
         and topic0 = 0x00ae2c76ca218353c7995e13a4af773a35837cb6ebb8288092d8190bcd9c8f68 -- WithdrawalRequested
