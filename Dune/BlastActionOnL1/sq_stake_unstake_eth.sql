@@ -20,7 +20,8 @@ with Event_ETHYieldManager_WithdrawRequested as (
         block_date
         , 'stake ETH' as action
         , tx_hash 
-        , varbinary_ltrim(topic1) as user
+        -- 不能用varbinary_ltrim(topic1) as user，因为最多可能是Blast: Deposit
+        , tx_from as user
         , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
@@ -34,7 +35,8 @@ with Event_ETHYieldManager_WithdrawRequested as (
         block_date 
         , 'stake stETH' as action
         , tx_hash
-        , varbinary_ltrim(topic3) as user
+        -- 不能用varbinary_ltrim(topic3) as user，因为最多可能是Blast: Deposit
+        , tx_from as user
         , varbinary_to_uint256(varbinary_substring(data,1+32,32)) as amount
     from ethereum.logs
     where contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
