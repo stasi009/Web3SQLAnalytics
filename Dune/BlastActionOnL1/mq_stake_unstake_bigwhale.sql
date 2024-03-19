@@ -27,7 +27,11 @@ with user_stake_eth as (
 )
 
 select 
-    *
+    user
+    , get_href(get_chain_explorer_address('ethereum', user),'etherscan') as link
+    , amt_stake_eth
+    , amt_stake_steth
+    , amt_unstake  
     , amt_stake_eth + amt_stake_steth - amt_unstake as net_deposit
 from (
     select 
