@@ -162,4 +162,21 @@ with Event_ETHBridgeInitiated as (
         and tx_hash = 0x55766ee1cf72625691d694fdc32758efe75a2f1e1959e6d3c88d8554d794056f
 )
 
-select * from Event_ETHYieldManager_WithdrawClaimed
+, Event_OptimismPortalProxy_Withdraw_StableCoin as (
+    --都是不成功的，L1只是接收到了withdraw请求，却没有接下来的动作了。所以目前还不支持withdraw stablecoin
+    select *  
+    from (
+        select 
+            block_time
+            , tx_hash
+            , varbinary_to_uint256(varbinary_substring(data,1,32)) as requestId
+        from ethereum.logs
+        where contract_address = 0x0Ec68c5B10F21EFFb74f2A5C61DFe6b08C0Db6Cb -- Blast: Optimism Portal Proxy
+            and topic0 = 0x5d5446905f1f582d57d04ced5b1bed0f1a6847bcee57f7dd9d6f2ec12ab9ec2e --WithdrawalProven
+            and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+    )
+    where requestId=0
+)
+
+select * from Event_OptimismPortalProxy_Withdraw_StableCoin
+order by block_time desc
