@@ -178,7 +178,7 @@ with Event_ETHBridgeInitiated as (
     where requestId=0
 )
 
-, Event_DsrYieldManager_WithdrawRequested as (
+, Event_UsdYieldManager_WithdrawRequested as (
     select 
         block_date
         , tx_hash
@@ -193,7 +193,19 @@ with Event_ETHBridgeInitiated as (
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
 )
 
+, Event_UsdYieldManager_WithdrawClaimed as (
+    select 
+        block_time
+        , tx_hash
+        , varbinary_to_uint256(topic1) as requestId
+        , bytearray_ltrim(topic2) as recipient 
+        , varbinary_to_uint256(varbinary_substring(data,1,32)) as amount
+    from ethereum.logs
+    where contract_address = 0xa230285d5683C74935aD14c446e137c8c8828438 -- Blast: USD Yield Manager Proxy
+        and topic0 = 0x8adb7a84b2998a8d11cd9284395f95d5a99f160be785ae79998c654979bd3d9a -- WithdrawalClaimed
+        and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+)
 
 
-select * from Event_DsrYieldManager_WithdrawRequested
+select * from Event_UsdYieldManager_WithdrawClaimed
 order by block_time desc
