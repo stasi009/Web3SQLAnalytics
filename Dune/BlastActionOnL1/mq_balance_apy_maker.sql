@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3536438
 with daily_stake_to_maker as (
     -- example: https://etherscan.io/tx/0x7bcd9f009a1fe9328b2222222b3331b3765c728901443b632796d6a9703d5c0a#eventlog
     select 
@@ -7,6 +8,7 @@ with daily_stake_to_maker as (
     where contract_address = 0x0733F618118bF420b6b604c969498ecf143681a8 -- Blast: DSR Yield Provider
         and topic0 = 0xad8699b31aa71e27625c441f641b4732d76e1b7475068543aaaee79bd2c3d1f6 -- Staked
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+        and block_date < current_date -- avoid incomplete day
     group by 1
 )
 
@@ -19,6 +21,7 @@ with daily_stake_to_maker as (
     where contract_address = 0x0733F618118bF420b6b604c969498ecf143681a8 -- Blast: DSR Yield Provider
         and topic0 = 0x41628d0ba42442e4aa4fc514eeb97bb7154969e70e6678229c836f3b9732ba90 -- Claimed
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+        and block_date < current_date -- avoid incomplete day
     group by 1
 )
 
@@ -31,6 +34,7 @@ with daily_stake_to_maker as (
     where contract_address = 0xa230285d5683C74935aD14c446e137c8c8828438 -- Blast: USD Yield Manager Proxy
         and topic0 = 0x00de4b58e7863b1e3dce7259a138136239427388d53e4844f369cdee7a81dbf5 -- YieldReport
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+        and block_date < current_date -- avoid incomplete day
     group by 1
 )
 

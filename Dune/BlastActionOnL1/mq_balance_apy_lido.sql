@@ -1,4 +1,4 @@
-
+-- https://dune.com/queries/3534999
 with daily_staked_to_lido as (-- ETH Yield Manager Stake to Lido
     -- example: https://etherscan.io/tx/0xa09595ea792df62cd28749a97b7a53bb5ce7ed2e82e4b66fcab006278d81b6a9#eventlog
     select 
@@ -8,6 +8,7 @@ with daily_staked_to_lido as (-- ETH Yield Manager Stake to Lido
     where contract_address = 0x4316A00D31da1313617DbB04fD92F9fF8D1aF7Db -- Blast: Lido Yield Provider
         and topic0 = 0xad8699b31aa71e27625c441f641b4732d76e1b7475068543aaaee79bd2c3d1f6 -- Staked
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+        and block_date < current_date -- avoid incomplete day
     group by 1
 )
 
@@ -20,6 +21,7 @@ with daily_staked_to_lido as (-- ETH Yield Manager Stake to Lido
     where contract_address = 0x4316A00D31da1313617DbB04fD92F9fF8D1aF7Db -- Blast: Lido Yield Provider
         and topic0 = 0x41628d0ba42442e4aa4fc514eeb97bb7154969e70e6678229c836f3b9732ba90 -- Claimed
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+        and block_date < current_date -- avoid incomplete day
     group by 1
 )
 
@@ -32,6 +34,7 @@ with daily_staked_to_lido as (-- ETH Yield Manager Stake to Lido
     where contract_address = 0x98078db053902644191f93988341E31289E1C8FE -- Blast: ETH Yield Manager Proxy
         and topic0 = 0x00de4b58e7863b1e3dce7259a138136239427388d53e4844f369cdee7a81dbf5 -- YieldReport
         and block_date >= date '2024-02-24' -- day when blast L1 bridge is deployed
+        and block_date < current_date -- avoid incomplete day
     group by 1
 )
 
