@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3539363
 with daily_stats as (
     select 
         block_date 
@@ -6,6 +7,8 @@ with daily_stats as (
         , count(distinct user) as num_users
         , sum(amount)/1e18 as dai_amount
     from query_3539341 --sq_stake_unstake_stablecoin.sql, https://dune.com/queries/3539341
+    where block_date >= date '{{start day}}'
+        and block_date < current_date -- avoid incomplete day
     group by 1,2
 )
 
