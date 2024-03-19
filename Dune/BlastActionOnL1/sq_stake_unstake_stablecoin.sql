@@ -20,7 +20,8 @@ with Event_UsdYieldManager_WithdrawRequested as (
         log.block_date
         , 'stake stablecoin' as action
         , tx_hash
-        , varbinary_ltrim(log.topic3) as user
+        -- 不能用varbinary_ltrim(log.topic3) as user,因为指向的都是Blast: Deposit
+        , tx_from as user
         , varbinary_to_uint256(varbinary_substring(log.data,1+32,32)) as amount -- DAI and USDB both 18 decimals
     from ethereum.logs log
     where log.contract_address = 0x3a05E5d33d7Ab3864D53aaEc93c8301C1Fa49115 -- Blast: L1 Bridge Proxy
