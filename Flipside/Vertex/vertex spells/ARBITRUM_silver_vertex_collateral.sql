@@ -19,18 +19,10 @@ WITH logs_pull AS (
         'ModifyCollateral' AS event_name,
         event_index,
         regexp_substr_all(SUBSTR(DATA, 3, len(DATA)), '.{64}') AS segmented_data,
-        LEFT(
-            topics [1] :: STRING,
-            42
-        ) AS trader,
+        LEFT(  topics [1] :: STRING, 42 ) AS trader,
         topics [1] :: STRING AS subaccount,
-        utils.udf_hex_to_int(
-            's2c',
-            segmented_data [0] :: STRING
-        ) :: INT AS amount,
-        utils.udf_hex_to_int(
-            segmented_data [1] :: STRING
-        ) :: INT AS product_id,
+        utils.udf_hex_to_int( 's2c',   segmented_data [0] :: STRING) :: INT AS amount,
+        utils.udf_hex_to_int( segmented_data [1] :: STRING ) :: INT AS product_id,
         _log_id,
         _inserted_timestamp
     FROM
@@ -83,8 +75,7 @@ product_id_join AS (
         l._inserted_timestamp
     FROM
         logs_pull l
-        LEFT JOIN {{ ref('silver__vertex_dim_products') }}
-        p
+        LEFT JOIN {{ ref('silver__vertex_dim_products') }} p
         ON l.product_id = p.product_id
 ),
 FINAL AS (
@@ -105,29 +96,17 @@ FINAL AS (
         A.symbol,
         A.token_address,
         amount AS amount_unadj,
-        amount / pow(
-            10,
-            18
-        ) AS amount,
-        (
-            amount / pow(
-                10,
-                18
-            ) * p.price
-        ) :: FLOAT AS amount_usd,
+        amount / pow( 10,  18 ) AS amount,
+        ( amount / pow( 10,    18  ) * p.price ) :: FLOAT AS amount_usd,
         A._log_id,
         A._inserted_timestamp
     FROM
         product_id_join A
-        LEFT JOIN {{ ref('price__ez_hourly_token_prices') }}
-        p
-        ON A.token_address = p.token_address
-        AND DATE_TRUNC(
-            'hour',
-            block_timestamp
-        ) = p.hour
+        LEFT JOIN {{ ref('price__ez_hourly_token_prices') }} p
+            ON A.token_address = p.token_address
+            AND DATE_TRUNC(  'hour',  block_timestamp ) = p.hour
         LEFT JOIN {{ ref('silver__contracts') }} C
-        ON A.token_address = C.contract_address
+            ON A.token_address = C.contract_address
 )
 SELECT
     *,
