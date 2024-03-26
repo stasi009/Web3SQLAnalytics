@@ -67,8 +67,7 @@ order_fill_decode AS (
         symbol,
         s.product_id,
         regexp_substr_all(SUBSTR(DATA, 3, len(DATA)), '.{64}') AS segmented_data,
-        topics [1] :: STRING AS digest,
-        --unique hash of the order
+        topics [1] :: STRING AS digest,--unique hash of the order
         LEFT(  topics [2] :: STRING,   42 ) AS trader,
         topics [2] :: STRING AS subaccount,
         utils.udf_hex_to_int(  segmented_data [0] :: STRING  ) :: INT AS pricex18,
@@ -102,8 +101,7 @@ order_fill_decode_v2 AS (
         regexp_substr_all(SUBSTR(DATA, 3, len(DATA)), '.{64}') AS segmented_data,
         utils.udf_hex_to_int( topics [1] :: STRING ) :: STRING AS product_id,
         s.symbol,
-        topics [2] :: STRING AS digest,
-        --unique hash of the order
+        topics [2] :: STRING AS digest,--unique hash of the order
         LEFT( topics [3] :: STRING,   42 ) AS trader,
         topics [3] :: STRING AS subaccount,
         utils.udf_hex_to_int(  segmented_data [0] :: STRING ) :: INT AS pricex18,
