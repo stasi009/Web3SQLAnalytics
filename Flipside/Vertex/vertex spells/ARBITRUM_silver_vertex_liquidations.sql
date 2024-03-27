@@ -53,10 +53,7 @@ logs_pull_v1 AS (
         event_index,
         regexp_substr_all(SUBSTR(DATA, 3, len(DATA)), '.{64}') AS segmented_data,
         topics [1] :: STRING AS digest,
-        LEFT(
-            topics [2] :: STRING,
-            42
-        ) AS trader,
+        LEFT( topics [2] :: STRING,  42 ) AS trader,
         topics [2] :: STRING AS subaccount,
         utils.udf_hex_to_int(
             topics [3] :: STRING
@@ -187,10 +184,7 @@ FINAL AS (
             18
         ) AS amount_quote,
         insurance_cover AS insurance_cover_unadj,
-        insurance_cover / pow(
-            10,
-            18
-        ) AS insurance_cover,
+        insurance_cover / pow( 10,  18 ) AS insurance_cover,
         is_encoded_spread,
         ARRAY_CONSTRUCT(
             NULL,
