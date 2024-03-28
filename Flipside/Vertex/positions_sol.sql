@@ -11,7 +11,7 @@ with daily_taker_spot_trades as (
     where block_timestamp >= current_date - interval '{{back_days}} day' 
         and block_timestamp < current_date -- avoid incomplete day
         and is_taker 
-        and symbol = 'WETH'
+        and lower(symbol) like '%sol%' -- ! actually vertex doesn't support SOL spot trading
     group by 1,2
 )
 , daily_taker_perp_trades as (
@@ -27,7 +27,7 @@ with daily_taker_spot_trades as (
     where block_timestamp >= current_date - interval '{{back_days}} day' 
         and block_timestamp < current_date -- avoid incomplete day
         and is_taker 
-        and symbol = 'ETH-PERP'
+        and symbol = 'SOL-PERP'
     group by 1,2
 )
 
@@ -48,12 +48,12 @@ with daily_taker_spot_trades as (
 
 , daily_prices as (
     select 
-        date_trunc('day',hour) as day 
-        , avg(price) as price
-    from ARBITRUM.price.ez_hourly_token_prices
-    where hour >= current_date - interval '{{back_days}} day' 
-        and hour < current_date -- avoid incomplete day
-        and token_address = lower('0x82aF49447D8a07e3bd95BD0d56f35241523fBab1') -- WETH
+        date_trunc('day',recorded_hour) as day 
+        , avg(close) as price
+    from solana.price.ez_token_prices_hourly
+    where recorded_hour >= current_date - interval '{{back_days}} day' 
+        and recorded_hour < current_date -- avoid incomplete day
+        and token_address = 'So11111111111111111111111111111111111111112' -- Wrapped SOL
     group by 1
 )
 
@@ -63,8 +63,8 @@ select
     , short_usd -- negative
     , buy_usd
     , sell_usd -- negative
-    , long_usd + short_usd as spot_skew
-    , buy_usd + sell_usd as perp_skew
+    , (long_usd + short_usd)/(long_usd - short_usd) as perp_skew
+    , (buy_usd + sell_usd)/(buy_usd - sell_usd) as spot_skew
     , p.price
 from daily_positions s
 inner join daily_prices p

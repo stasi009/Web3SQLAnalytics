@@ -63,8 +63,8 @@ select
     , short_usd -- negative
     , buy_usd
     , sell_usd -- negative
-    , long_usd + short_usd as spot_skew
-    , buy_usd + sell_usd as perp_skew
+    , (long_usd + short_usd)/(long_usd - short_usd) as perp_skew
+    , (buy_usd + sell_usd)/(buy_usd - sell_usd) as spot_skew
     , p.price
 from daily_positions s
 inner join daily_prices p
