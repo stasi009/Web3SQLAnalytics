@@ -1,7 +1,7 @@
 
 with taker_trades as (
     select 
-        date_trunc('day',block_timestamp) as day
+        date_trunc('week',block_timestamp) as week
         , trader 
         , case 
             when amount<0 then 'short'
@@ -9,7 +9,8 @@ with taker_trades as (
         end as action
         , amount_usd
     from ARBITRUM.vertex.ez_perp_trades
-    where is_taker 
+    where block_timestamp < date_trunc('week',current_date) -- avoid incomplete week
+        and is_taker 
         and symbol = '{{PerpSymbol}}'
 )
 
@@ -30,25 +31,38 @@ with taker_trades as (
 --     group by 1
 -- )
 
-, taker_first_day as (
+, taker_first_week as (
     select 
         trader 
-        , min(day) as first_day
+        , min(week) as first_week
     from taker_trades
     group by 1
 )
 
+, extend_trades_with_firstinfo as (
+    select 
+        tr.week 
+
+        , iff(tr.week = fw.first_week and action='long', trader, null) as trader_first_long 
+        , iff(tr.week = fw.first_week and action='long', amount_usd, null) as first_long_vol
+
+        , iff(tr.week = fw.first_week and action='short', trader, null) as trader_first_short
+        , iff(tr.week = fw.first_week and action='short', -amount_usd, null) as first_short_vol
+
+    from taker_trades tr
+    join taker_first_week fw
+        using (trader)
+)
+
 select 
-    tr.day 
-    , trader
+    week 
 
-    , iff(tr.day = fd.first_day and action='long', 1, 0) as first_long 
-    , iff(tr.day = fd.first_day and action='long', amount_usd, null) as first_long_vol
+    , count(distinct trader_first_long) as new_longer
+    , sum(first_long_vol) as first_long_vol 
 
-    , iff(tr.day = fd.first_day and action='short', 1, 0) as first_short
-    , iff(tr.day = fd.first_day and action='short', -amount_usd, null) as first_short_vol
+    , count(distinct trader_first_short) as new_shorters
+    , sum(first_short_vol) as first_short_vol 
+from extend_trades_with_firstinfo
+group by 1
 
-from taker_trades tr
-join taker_first_day fd
-    using (trader)
 
