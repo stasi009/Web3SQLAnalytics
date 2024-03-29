@@ -26,15 +26,21 @@ with trades as (
     select 
         trader 
         , t.week 
-        , iff(t.week = f.first_week, 'New User', 'Old User') as user_type
+        , t.week = f.first_week is_new_user
     from trades t
     inner join user_first_week f
         using (trader)
 )
 
 select 
-    week
-    , user_type 
-    , count(distinct trader) as num_traders
-from trades_extend_new_old
-group by 1,2
+    *
+    , cast(num_new_traders as double)/(num_new_traders+num_old_traders) as new_trader_ratio
+from (
+    select 
+        week
+        , count(distinct iff(is_new_user,trader,null)) as num_new_traders
+        , count(distinct iff(not is_new_user,trader,null)) as num_old_traders
+    from trades_extend_new_old
+    group by 1
+)
+
