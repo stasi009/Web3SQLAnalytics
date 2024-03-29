@@ -52,6 +52,14 @@ with taker_trades as (
     group by 1,2
 )
 
+, weekly_num_scales as (--每周有几个scale
+    select 
+        week
+        , count(trader_scale_level) as num_scales  
+    from weekly_positions_by_scale
+    group by 1
+)
+
 , weekly_prices as (
     select 
         date_trunc('week',hour) as week 
@@ -68,9 +76,12 @@ select
     , s.trader_scale_level
     , s.num_traders 
     , s.total_net_position
-    , p.price
+    -- 不得不做以下处理，否则如果一周有3个scale level，那么相同的price会累加3次再显示
+    , p.price / ns.num_scales as price
 from weekly_positions_by_scale s
 inner join weekly_prices p
+    using (week)
+inner join weekly_num_scales ns 
     using (week)
 order by 1
 
