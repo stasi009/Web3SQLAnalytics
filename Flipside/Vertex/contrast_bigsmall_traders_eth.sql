@@ -7,7 +7,7 @@ with taker_trades as (
         , iff(amount>0,1,-1) * amount_usd as position_usd
     from ARBITRUM.vertex.ez_perp_trades
     where is_taker 
-        and symbol = 'BTC-PERP'
+        and symbol = 'ETH-PERP'
 )
 
 , trader_position_scale as (
@@ -67,7 +67,7 @@ with taker_trades as (
     from ARBITRUM.price.ez_hourly_token_prices
     where hour >= date '2023-03-05' -- vertex go online
         and hour < date_trunc('week',current_date) -- avoid incomplete week
-        and token_address = lower('0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f') -- WBTC
+        and token_address = lower('0x82aF49447D8a07e3bd95BD0d56f35241523fBab1') -- WETH
     group by 1
 )
 
