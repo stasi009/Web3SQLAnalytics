@@ -1,11 +1,7 @@
-
 with liquidation as (
     select 
         date_trunc('day',lq.block_timestamp) as day 
-        , case 
-            when lq.amount_quote >0 then 'Good'
-            else 'Bad' 
-        end as liq_asset_quality
+        , lq.amount_quote >0 as is_good_asset
         , lq.health_group_symbol as liq_asset_token
         , lq.amount_quote -- unit: usd
         , trader as liquidatee
@@ -17,17 +13,20 @@ with liquidation as (
 , daily_liquidation as (
     select 
         day
-        , liq_asset_quality as "Liquidate Asset Quality"
-        , count(distinct liquidatee) as "Daily Liquidatee"
-        , sum(amount_quote) as "Daily Liquidate USD"
+
+        , count(distinct iff(is_good_asset,liquidatee,null)) as num_good_liquidatee
+        , count(distinct iff(not is_good_asset,liquidatee,null)) as num_bad_liquidatee
+
+        , sum(iff(is_good_asset, amount_quote, null)) as liquidate_good_usd
+        , sum(iff(not is_good_asset, amount_quote, null)) as liquidate_bad_usd
     from liquidation
-    group by 1,2
+    group by 1
 )
 
 , daily_btc_prices as (
     select 
         date_trunc('day',hour) as day 
-        , avg(price) as daily_btc_price
+        , avg(price) as btc_price
     from ARBITRUM.price.ez_hourly_token_prices
     where hour >= current_date - interval '{{back_days}} day' 
         and hour < current_date -- avoid incomplete day
@@ -35,7 +34,11 @@ with liquidation as (
     group by 1
 )
 
-select * 
-from daily_liquidation
-order by day, "Liquidate Asset Quality"
+select 
+    l.*  
+    , p.btc_price
+from daily_liquidation l
+right join daily_btc_prices p 
+    on l.day = p.day
+order by day
 
