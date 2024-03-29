@@ -27,16 +27,24 @@ with liquidation as (
     select 
         date_trunc('day',hour) as day 
         , avg(price) as btc_price
-    from ARBITRUM.price.ez_hourly_token_prices
-    where hour >= current_date - interval '{{back_days}} day' 
-        and hour < current_date -- avoid incomplete day
-        and token_address = lower('0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f') -- WBTC
+        , max(price_volatility) as btc_price_volatility
+    from (
+        select 
+            hour
+            , price
+            , stddev(price) over (order by hour rows 127 preceding) as price_volatility -- 128小时即一周的stddev
+        from ARBITRUM.price.ez_hourly_token_prices
+        where hour >= current_date - interval '{{back_days}} day' 
+            and hour < current_date -- avoid incomplete date
+            and token_address = lower('0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f') -- WBTC
+    )
     group by 1
 )
 
 select 
     l.*  
     , p.btc_price
+    , p.btc_price_volatility
 from daily_liquidation l
 right join daily_btc_prices p 
     on l.day = p.day
