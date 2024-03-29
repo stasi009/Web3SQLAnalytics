@@ -17,8 +17,7 @@ with taker_trades as (
         , case 
             when net_position_usd >= 500000 then 'long bigwhale'
             when net_position_usd <= -500000 then 'short bigwhale'
-            when net_position_usd between 0 and 1000 then 'long retail'
-            when net_position_usd between -1000 and 0 then 'short retail'
+            when net_position_usd between -1000 and 1000 then 'retail investor'
             else 'medium'
         end as trader_scale_level
     from (
@@ -39,14 +38,39 @@ with taker_trades as (
     group by 1
 )
 
+, weekly_positions_by_scale as (
+    select 
+        date_trunc('week',tr.block_timestamp) as week
+        , scale.trader_scale_level
+        , count(distinct trader) as num_traders
+        , sum(tr.position_usd) as total_net_position
+    from taker_trades tr
+    inner join trader_position_scale as scale 
+        using (trader)
+    where scale.trader_scale_level <> 'medium'
+        and tr.block_timestamp < date_trunc('week',current_date) -- avoid incomplete date
+    group by 1,2
+)
+
+, weekly_prices as (
+    select 
+        date_trunc('week',hour) as week 
+        , avg(price) as price
+    from ARBITRUM.price.ez_hourly_token_prices
+    where hour >= date '2023-03-05' -- vertex go online
+        and hour < date_trunc('week',current_date) -- avoid incomplete week
+        and token_address = lower('0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f') -- WBTC
+    group by 1
+)
+
 select 
-    date_trunc('week',tr.block_timestamp) as week
-    , scale.trader_scale_level
-    , count(distinct trader) as num_traders
-    , sum(tr.position_usd) as total_position
-from taker_trades tr
-inner join trader_position_scale scale
-    using(trader)
-where scale.trader_scale_level <> 'medium'
-    and tr.block_timestamp < date_trunc('week',current_date) -- avoid incomplete date
-group by 1,2
+    week
+    , s.trader_scale_level
+    , s.num_traders 
+    , s.total_net_position
+    , p.price
+from weekly_positions_by_scale s
+inner join weekly_prices p
+    using (week)
+order by 1
+
