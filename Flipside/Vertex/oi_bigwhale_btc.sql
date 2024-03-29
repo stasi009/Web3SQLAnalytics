@@ -33,7 +33,7 @@ with group_trades_by_user as (
 )
 
 select * from short_bigwhale
-union all 
+union all -- union all cannot appear between limit, so have to enclose limit into separate CTE
 select * from long_bigwhale
 
 
