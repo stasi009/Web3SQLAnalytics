@@ -11,7 +11,7 @@ with evt_claimed as (
         and topic0 = 0x4ec90e965519d92681267467f775ada5bd214aa92c0dc93d90a5e880ce9ed026 -- claimed
 )
 
-, all_qualified_accounts_with_claim_flag as (
+, all_qualified_accounts_with_claim_info as (
     select  
         all.address 
         , all.total_op
@@ -25,9 +25,9 @@ with evt_claimed as (
 select 
     count(address) as total_qualified_accounts
     , sum(is_claimed) as num_claimed_accounts
-    , cast(sum(claimed) as double) / count(address) as claimed_user_rate
+    , cast(sum(is_claimed) as double) * 100 / count(address) as claimed_user_percent
 
     , sum(total_op) as total_op 
     , sum(claimed_op) as claimed_op
-    , sum(claimed_op) / sum(total_op) as claimed_op_rate
-from all_qualified_accounts_with_claim_flag
+    , sum(claimed_op) * 100 / sum(total_op) as claimed_op_percent
+from all_qualified_accounts_with_claim_info
