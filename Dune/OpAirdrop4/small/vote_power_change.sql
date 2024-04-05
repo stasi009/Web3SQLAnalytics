@@ -7,14 +7,14 @@ with airdrop as (
         and topic0 = 0x4ec90e965519d92681267467f775ada5bd214aa92c0dc93d90a5e880ce9ed026 -- claimed
 )
 
-voting_power_daily_change as (
+, voting_power_daily_change as (
     select 
         day
         , daily_power_diff
         , sum(daily_power_diff) over (order by day) as total_voting_power
     from (
         select 
-            date_trun('day',block_time) as day 
+            date_trunc('day',block_time) as day 
             , sum(power_diff) as daily_power_diff
         from op_governance_optimism.voting_power
         group by 1
