@@ -29,11 +29,12 @@ with evt_claimed as (
 
 select 
     b.idx as bin_idx
+    , round(b.lb,2) as bin_lb
     , count(c.claimer) as num_claimers
 from op_amt_bins b
 left join evt_claimed c
     on c.op_amt_adjdec >= b.lb 
     and c.op_amt_adjdec < b.ub
-group by 1
+group by 1,2
 order by 1
 
