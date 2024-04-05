@@ -29,3 +29,4 @@ select
 from voting_power_daily_change vpd
 cross join airdrop ad 
 where day >= ad.start_claim_day - interval '{{days_before_airdrop}}' day
+    and day < current_date -- avoid incomplete date
