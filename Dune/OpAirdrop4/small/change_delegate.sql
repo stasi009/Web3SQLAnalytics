@@ -20,13 +20,14 @@ with start_claim as (
 )
 
 , delegate_change_for_claimers as (
+    -- 只关心claimer的delegate change情况(包括airdrop前与后)。注意！有些claimer之前与之前都没有delegate过
     select
         del.evt_block_time
         , del.delegator 
         , del.toDelegate 
     from op_optimism.GovernanceToken_evt_DelegateChanged del
     inner join airdrop_claimed ac  
-        on del.delegator = ac.claimer -- 只关心claimer的delegate change情况(包括airdrop前与后)
+        on del.delegator = ac.claimer 
 )
 
 , claimer_delegate_before_airdrop as (
@@ -37,7 +38,7 @@ with start_claim as (
         select
             del.delegator 
             , del.toDelegate 
-            , rank() over (partition by del.delegator order by del.evt_block_time desc) as rank
+            , row_number() over (partition by del.delegator order by del.evt_block_time desc) as rank
         from delegate_change_for_claimers del
         cross join start_claim sc
         where del.evt_block_time < sc.start_claim_tm
@@ -53,7 +54,7 @@ with start_claim as (
         select
             del.delegator 
             , del.toDelegate 
-            , rank() over (partition by del.delegator order by del.evt_block_time desc) as rank
+            , row_number() over (partition by del.delegator order by del.evt_block_time desc) as rank
         from delegate_change_for_claimers del
         cross join start_claim sc
         where del.evt_block_time >= sc.start_claim_tm
@@ -63,12 +64,39 @@ with start_claim as (
 
 , claimer_delegate_changes as (
     select 
-        delegator
-        , delegate_before_airdrop
-        , delegate_after_airdrop
-    from claimer_delegate_before_airdrop
-    full outer join claimer_delegate_after_airdrop
-        using (delegator)
+        *  
+        , case 
+            when delegate_before_airdrop = 0x0000000000000000000000000000000000000000 
+                and delegate_after_airdrop <> 0x0000000000000000000000000000000000000000
+                then 'Begin Delegate'
+            when delegate_before_airdrop <> 0x0000000000000000000000000000000000000000 
+                and delegate_after_airdrop = 0x0000000000000000000000000000000000000000
+                then 'Quit Delegate'
+            when delegate_before_airdrop = 0x0000000000000000000000000000000000000000 
+                and delegate_after_airdrop = 0x0000000000000000000000000000000000000000
+                then 'Still Not Delegate'
+            when delegate_before_airdrop = delegate_after_airdrop 
+                then 'Keep Same Delegate'
+            when delegate_before_airdrop <> delegate_after_airdrop 
+                then 'Change Delegate'  
+        end as change_after_airdrop
+    from (
+        select 
+            ac.claimer as delegator
+            , coalesce(delegate_before_airdrop,0x0000000000000000000000000000000000000000) as delegate_before_airdrop
+            , coalesce(delegate_after_airdrop,0x0000000000000000000000000000000000000000) as delegate_after_airdrop
+        from airdrop_claimed ac  
+        left join claimer_delegate_before_airdrop pread
+            on ac.claimer = pread.delegator
+        left join claimer_delegate_after_airdrop postad
+            on ac.claimer = postad.delegator
+    )
+    
 )
 
-select * from claimer_delegate_changes
+select 
+    change_after_airdrop
+    , count(delegator) as num_delegators
+    , cast(count(delegator) as double) / (sum(count(delegator)) over () ) as delegator_percentage 
+from claimer_delegate_changes
+group by change_after_airdrop
