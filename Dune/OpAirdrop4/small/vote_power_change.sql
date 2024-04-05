@@ -23,3 +23,18 @@ with airdrop as (
     where rev_rank = 1
 )
 
+select 
+    day
+    , if(day >= ad.start_claim_day, 'After Airdrop', 'Before Airdrop') as period
+    
+    , total_voting_power
+    , total_voting_power - lag(total_voting_power) ignore nulls over (order by day) as vote_power_diff
+
+    , total_delegators
+    , total_delegators - lag(total_delegators) ignore nulls over (order by day) as delegators_diff
+    
+from daily_last_stat
+cross join airdrop ad 
+where day >= ad.start_claim_day - interval '{{days_before_airdrop}}' day
+    and day < current_date -- avoid incomplete date
+
