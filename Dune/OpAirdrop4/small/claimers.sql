@@ -4,7 +4,7 @@ with evt_claimed as (
         tx_hash 
         , block_time
         -- ! NOTE: 不能用varbinary_ltrim去除地址前边的0，因为有的地址就是以0开头的
-        , varbinary_substring(data,1+32+12,20)) as claimer 
+        , varbinary_substring(data,1+32+12,20) as claimer 
         , varbinary_to_uint256(varbinary_substring(data,1+2*32,32)) / 1e18 as op_amt_adjdec
     from optimism.logs
     where block_date >= date '2024-02-16' -- day when airdrop contract is deployed
