@@ -1,7 +1,9 @@
 with opt_amt_range as (
+    -- 这里将lower bound比actual minimum更小，upper bound比actual maximum更大
+    -- 这样保证[lb, ub)能够囊括全部范围
     select 
-        min(total_op) as min_amt
-        , (max(total_op) - min(total_op))/{{bins}} as bin_width
+        min(total_op)*0.9 as min_amt
+        , (max(total_op)*1.1 - min(total_op)*0.9)/{{bins}} as bin_width
     from dune.oplabspbc.dataset_op_airdrop_4_simple_list -- all addresses qualified for airdrop4
 )
 
@@ -44,4 +46,19 @@ with opt_amt_range as (
         on all.total_op >= bins.lb 
         and all.total_op < bins.ub
 )
+
+select 
+    bin_idx
+    , bin_lb 
+
+    , count(address) as total_qualified_accounts
+    , sum(is_claimed) as num_claimed_accounts
+    , count(address) - sum(is_claimed) as not_claimed_accounts
+
+    , sum(total_op) as total_op 
+    , sum(claimed_op) as claimed_op
+    , sum(total_op) - sum(claimed_op) as not_claimed_op
+from all_qualified_accounts_extend 
+group by 1,2
+order by 1
 
