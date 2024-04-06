@@ -54,10 +54,12 @@ select
     , count(address) as total_qualified_accounts
     , sum(is_claimed) as num_claimed_accounts
     , count(address) - sum(is_claimed) as not_claimed_accounts
+    , cast(sum(is_claimed) as double)/count(address) as claimed_user_ratio
 
     , sum(total_op) as total_op 
     , sum(claimed_op) as claimed_op
     , sum(total_op) - sum(claimed_op) as not_claimed_op
+    , sum(claimed_op) / sum(total_op) as claimed_op_ratio
 from all_qualified_accounts_extend 
 group by 1,2
 order by 1

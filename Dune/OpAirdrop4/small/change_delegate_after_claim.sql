@@ -1,16 +1,8 @@
-with start_claim as (
-    select 
-        min(block_time) as start_claim_tm
-    from optimism.logs
-    where block_date >= date '2024-02-16' -- day when airdrop contract is deployed
-        and contract_address = 0xFb4D5A94b516DF77Fbdbcf3CfeB262baAF7D4dB7 -- airdrop contract
-        and topic0 = 0x4ec90e965519d92681267467f775ada5bd214aa92c0dc93d90a5e880ce9ed026 -- claimed
-)
+-- https://dune.com/queries/3593109/6053317
 
-, airdrop_claimed as (
+with airdrop_claimed as (
     select 
-        -- tx_hash 
-        -- , block_time
+        block_time
         -- ! NOTE: 不能用varbinary_ltrim去除地址前边的0，因为有的地址就是以0开头的
         varbinary_substring(data,1+32+12,20) as claimer 
         -- , varbinary_to_uint256(varbinary_substring(data,1+2*32,32)) / 1e18 as op_amt_adjdec
@@ -18,6 +10,12 @@ with start_claim as (
     where block_date >= date '2024-02-16' -- day when airdrop contract is deployed
         and contract_address = 0xFb4D5A94b516DF77Fbdbcf3CfeB262baAF7D4dB7 -- airdrop contract
         and topic0 = 0x4ec90e965519d92681267467f775ada5bd214aa92c0dc93d90a5e880ce9ed026 -- claimed
+)
+
+, start_claim as (
+    select 
+        min(block_time) as start_claim_tm
+    from airdrop_claimed
 )
 
 , delegate_change_for_claimers as (
