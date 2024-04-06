@@ -26,6 +26,7 @@ with airdrop_claimed as (
         on tf.to = deladdr.address -- 只关心发向delgate的,主要是来自airdrop合约
     cross join first_claim fc
     where tf.evt_block_time >= fc.first_claim_tm
+        and contract_address = 0x4200000000000000000000000000000000000042 -- OP token
     group by 1
 )
 
@@ -38,6 +39,7 @@ with airdrop_claimed as (
         on tf."from" = deladdr.address -- 只关心由delegate向外发出的op，这代表了voting power下降的主流情况
     cross join first_claim fc
     where tf.evt_block_time >= fc.first_claim_tm
+        and contract_address = 0x4200000000000000000000000000000000000042 -- OP token
     group by 1
 )
 
