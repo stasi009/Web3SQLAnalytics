@@ -45,7 +45,7 @@ with airdrop_claimed as (
     where rank = 1
 )
 
-, claimer_delegate_after_airdrop as (
+, claimer_delegate_current as (
     select 
         delegator
         , toDelegate as delegate_after_airdrop
@@ -55,8 +55,6 @@ with airdrop_claimed as (
             , del.toDelegate 
             , row_number() over (partition by del.delegator order by del.evt_block_time desc) as rank
         from delegate_change_for_claimers del
-        cross join start_claim sc
-        where del.evt_block_time >= sc.start_claim_tm
     )
     where rank = 1
 )
@@ -87,7 +85,7 @@ with airdrop_claimed as (
         from airdrop_claimed ac  
         left join claimer_delegate_before_airdrop pread
             on ac.claimer = pread.delegator
-        left join claimer_delegate_after_airdrop postad
+        left join claimer_delegate_current postad
             on ac.claimer = postad.delegator
     )
     

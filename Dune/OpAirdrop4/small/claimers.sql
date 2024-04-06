@@ -1,4 +1,5 @@
 
+-- https://dune.com/queries/3590995
 with evt_claimed as (
     select 
         tx_hash 
