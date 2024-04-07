@@ -134,7 +134,6 @@ with airdrop_claimed as (
     )
 )
 
-
 , claimer_delegate_changes_tagged as (
     select 
         *  
@@ -152,13 +151,15 @@ with airdrop_claimed as (
             when delegate_before_airdrop <> delegate_after_airdrop 
                 then 'Change Delegate'  
         end as change_summary
-    from query_3598102
+    from claimer_delegate_changes
 )
 
 select 
     change_summary
     , count(claimer) as num_claimers
-    , cast(count(claimer) as double) / (sum(count(claimer)) over () ) as claimer_percentage 
+    , sum(vote_power_pre_ad) as vote_power_pre_ad
+    , sum(vote_power_post_ad) as vote_power_post_ad
+    , if(sum(vote_power_pre_ad) < 1e-6, 0, sum(vote_power_post_ad)/sum(vote_power_pre_ad)-1) as vote_power_change_percentage
 from claimer_delegate_changes_tagged
 group by change_summary
 order by num_claimers desc
