@@ -54,4 +54,5 @@ select
     , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
 from claimer_vote_power_changes_with_claimop_bin -- claimer_vote_power_change.sql
 group by 1,2,3
+order by 1,3
 
