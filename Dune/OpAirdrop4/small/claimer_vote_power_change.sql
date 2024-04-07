@@ -105,7 +105,7 @@ with airdrop_claimed as (
 )
 
 --- ################################ combine
-, claimer_delegate_changes as (
+, claimer_vote_power_changes as (
     select 
         *
         , is_delegated_pre_ad * op_before_airdrop as vote_power_pre_ad
@@ -150,4 +150,4 @@ select
         when delegate_before_airdrop <> delegate_after_airdrop 
             then 'Change Delegate'  
     end as change_summary
-from claimer_delegate_changes
+from claimer_vote_power_changes
