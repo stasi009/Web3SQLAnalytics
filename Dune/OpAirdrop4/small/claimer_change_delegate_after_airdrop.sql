@@ -1,14 +1,14 @@
--- https://dune.com/queries/3593109/6053317
+-- https://dune.com/queries/3593109
 
 with claimer_delegate_changes as (
     select 
         *  
         , case 
-            when is_delegated_pre_ad = 0 and is_delegated_post_ad = 1
+            when vote_power_pre_ad <= 1e-6 and vote_power_post_ad > 1e-6
                 then 'Begin Delegate'
-            when is_delegated_pre_ad = 1 and is_delegated_post_ad = 0
+            when vote_power_pre_ad > 1e-6 and vote_power_post_ad <= 1e-6
                 then 'Quit Delegate'
-            when is_delegated_pre_ad = 0 and is_delegated_post_ad = 0
+            when vote_power_pre_ad <= 1e-6 and vote_power_post_ad <= 1e-6
                 then 'Still Not Delegate'
             when delegate_before_airdrop = delegate_after_airdrop 
                 then 'Keep Same Delegate'
