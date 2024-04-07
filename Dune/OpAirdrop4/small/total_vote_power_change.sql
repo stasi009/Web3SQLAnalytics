@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3593025
 with airdrop as (
     select 
         date_trunc('day',min(block_time)) as start_claim_day
