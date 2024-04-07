@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3598102
 with airdrop_claimed as (
     select 
         block_time
