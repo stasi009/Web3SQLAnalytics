@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3594147/
 with opt_amt_range as (
     -- 这里将lower bound比actual minimum更小，upper bound比actual maximum更大
     -- 这样保证[lb, ub)能够囊括全部范围
