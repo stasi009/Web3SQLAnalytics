@@ -105,34 +105,37 @@ with airdrop_claimed as (
 )
 
 --- ################################ combine
-select 
-    *
-    , is_delegated_pre_ad * op_before_airdrop as vote_power_pre_ad
-    , is_delegated_post_ad * op_after_airdrop as vote_power_post_ad
-from (
+, claimer_delegate_changes as (
     select 
-        ac.claimer
-        , ac.claim_op
+        *
+        , is_delegated_pre_ad * op_before_airdrop as vote_power_pre_ad
+        , is_delegated_post_ad * op_after_airdrop as vote_power_post_ad
+    from (
+        select 
+            ac.claimer
+            , ac.claim_op
 
-        , delegate_before_airdrop
-        , if(delegate_before_airdrop is null or delegate_before_airdrop = 0x0000000000000000000000000000000000000000,0,1) as is_delegated_pre_ad
-        , delegate_after_airdrop
-        , if(delegate_after_airdrop is null or delegate_after_airdrop = 0x0000000000000000000000000000000000000000,0,1) as is_delegated_post_ad
+            , delegate_before_airdrop
+            , if(delegate_before_airdrop is null or delegate_before_airdrop = 0x0000000000000000000000000000000000000000,0,1) as is_delegated_pre_ad
+            , delegate_after_airdrop
+            , if(delegate_after_airdrop is null or delegate_after_airdrop = 0x0000000000000000000000000000000000000000,0,1) as is_delegated_post_ad
 
-        , coalesce(op_before_airdrop,0) as op_before_airdrop
-        , coalesce(op_after_airdrop,0) as op_after_airdrop
-    from airdrop_claimed ac  
-    left join claimer_delegate_before_airdrop bfd
-        on ac.claimer = bfd.delegator
-    left join claimer_delegate_current afd
-        on ac.claimer = afd.delegator
-    left join claimer_op_before_airdrop bfo 
-        on ac.claimer = bfo.account 
-    left join claimer_op_current afo 
-        on ac.claimer = afo.account 
+            , coalesce(op_before_airdrop,0) as op_before_airdrop
+            , coalesce(op_after_airdrop,0) as op_after_airdrop
+        from airdrop_claimed ac  
+        left join claimer_delegate_before_airdrop bfd
+            on ac.claimer = bfd.delegator
+        left join claimer_delegate_current afd
+            on ac.claimer = afd.delegator
+        left join claimer_op_before_airdrop bfo 
+            on ac.claimer = bfo.account 
+        left join claimer_op_current afo 
+            on ac.claimer = afo.account 
+    )
 )
 
-, claimer_delegate_changes as (
+
+, claimer_delegate_changes_tagged as (
     select 
         *  
         -- !这里没有使用abs，尽管由于浮点数计算误差，有的account balance是-6e-16这个级别的负数
@@ -148,14 +151,14 @@ from (
                 then 'Keep Same Delegate'
             when delegate_before_airdrop <> delegate_after_airdrop 
                 then 'Change Delegate'  
-        end as change_after_airdrop
+        end as change_summary
     from query_3598102
 )
 
 select 
-    change_after_airdrop
+    change_summary
     , count(claimer) as num_claimers
     , cast(count(claimer) as double) / (sum(count(claimer)) over () ) as claimer_percentage 
-from claimer_delegate_changes
-group by change_after_airdrop
+from claimer_delegate_changes_tagged
+group by change_summary
 order by num_claimers desc
