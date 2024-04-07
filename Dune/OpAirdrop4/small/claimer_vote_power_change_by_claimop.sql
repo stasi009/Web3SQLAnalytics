@@ -17,14 +17,41 @@ with opt_amt_range as (
     cross join opt_amt_range r
 )
 
+, claimer_vote_power_changes_with_claimop_bin as (
+    select 
+        claimer
+        , change_summary
+
+        , claim_op
+        , bins.bin_idx
+        , bins.lb as bin_lb
+        , bins.ub as bin_ub
+
+        , delegate_before_airdrop
+        , delegate_after_airdrop
+
+        , op_before_airdrop
+        , op_after_airdrop
+
+        , vote_power_pre_ad
+        , vote_power_post_ad
+    from query_3598102 -- claimer_vote_power_change.sql
+    left join op_amt_bins bins
+        on claim_op >= bins.lb 
+        and claim_op < bins.ub
+)
+
 select 
-    change_summary
+    bin_idx
+    , '[' || cast(cast(bin_lb as int) as varchar) || ',' || cast(cast(bin_ub as int) as varchar) || ')' as bin_label
+    , change_summary
+
     , count(claimer) as num_claimers
     , sum(claim_op) as claim_op
 
     , sum(vote_power_pre_ad) as vote_power_pre_ad
     , sum(vote_power_post_ad) as vote_power_post_ad
     , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
-from query_3598102 -- claimer_vote_power_change.sql
-group by change_summary
+from claimer_vote_power_changes_with_claimop_bin -- claimer_vote_power_change.sql
+group by 1,2,3
 
