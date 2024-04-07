@@ -11,18 +11,14 @@ with airdrop_claimed as (
         and topic0 = 0x4ec90e965519d92681267467f775ada5bd214aa92c0dc93d90a5e880ce9ed026 -- claimed
 )
 
-, first_claim as (
-    select min(block_time) as first_claim_tm
-    from airdrop_claimed
-)
-
 --- ################################ delegate change
 , delegate_change_for_claimers as (
     -- 只关心claimer的delegate change情况(包括airdrop前与后)。注意！可能有些claimer之前与之后都没有delegate过
     select
-        del.evt_block_time
+        del.evt_block_time as delegate_tm
         , del.delegator 
         , del.toDelegate 
+        , ac.block_time as claim_tm
     from op_optimism.GovernanceToken_evt_DelegateChanged del
     inner join airdrop_claimed ac  
         on del.delegator = ac.claimer 
@@ -38,8 +34,7 @@ with airdrop_claimed as (
             , del.toDelegate 
             , row_number() over (partition by del.delegator order by del.evt_block_time desc) as rank
         from delegate_change_for_claimers del
-        cross join first_claim fc
-        where del.evt_block_time < fc.first_claim_tm
+        where delegate_tm < claim_tm -- delegate change before claim airdrop
     )
     where rank = 1
 )
@@ -71,9 +66,10 @@ with airdrop_claimed as (
 
 , op_flow_with_claimers as (
     select
-        tf.block_time 
+        tf.block_time as transfer_tm
         , ac.claimer as account
         , tf.op_amount
+        , ac.block_time as claim_tm
     from op_transfer tf
     inner join airdrop_claimed ac   
         on tf.to = ac.claimer
@@ -82,9 +78,10 @@ with airdrop_claimed as (
     union all 
 
     select 
-        tf.block_time
+        tf.block_time as transfer_tm
         , ac.claimer as account
         , -tf.op_amount as op_amount
+        , ac.block_time as claim_tm
     from op_transfer tf
     inner join airdrop_claimed ac   
         on tf."from" = ac.claimer
@@ -95,8 +92,7 @@ with airdrop_claimed as (
         account 
         , sum(op_amount) as op_before_airdrop
     from op_flow_with_claimers opf
-    cross join first_claim fc 
-    where opf.block_time < fc.first_claim_tm
+    where transfer_tm < claim_tm -- transfer before claim airdrop
     group by 1
 )
 
