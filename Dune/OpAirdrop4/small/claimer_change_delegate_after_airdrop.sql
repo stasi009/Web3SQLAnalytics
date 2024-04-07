@@ -3,6 +3,8 @@
 with claimer_delegate_changes as (
     select 
         *  
+        -- !这里没有使用abs，尽管由于浮点数计算误差，有的account balance是-6e-16这个级别的负数
+        -- 但是考虑到这种极小的负数也能够被<1e-6处理，所以这里也就没使用abs
         , case 
             when vote_power_pre_ad <= 1e-6 and vote_power_post_ad > 1e-6
                 then 'Begin Delegate'
