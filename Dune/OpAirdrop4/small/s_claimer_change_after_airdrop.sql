@@ -110,20 +110,28 @@ with airdrop_claimed as (
 
 --- ################################ combine
 select 
-    ac.claimer
-    , ac.claim_op
+    *
+    , is_delegated_pre_ad * op_before_airdrop as vote_power_pre_ad
+    , is_delegated_post_ad * op_after_airdrop as vote_power_post_ad
+from (
+    select 
+        ac.claimer
+        , ac.claim_op
 
-    , delegate_before_airdrop
-    , delegate_after_airdrop
+        , delegate_before_airdrop
+        , if(delegate_before_airdrop is null or delegate_before_airdrop = 0x0000000000000000000000000000000000000000,0,1) as is_delegated_pre_ad
+        , delegate_after_airdrop
+        , if(delegate_after_airdrop is null or delegate_after_airdrop = 0x0000000000000000000000000000000000000000,0,1) as is_delegated_post_ad
 
-    , op_before_airdrop
-    , op_after_airdrop
-from airdrop_claimed ac  
-left join claimer_delegate_before_airdrop bfd
-    on ac.claimer = bfd.delegator
-left join claimer_delegate_current afd
-    on ac.claimer = afd.delegator
-left join claimer_op_before_airdrop bfo 
-    on ac.claimer = bfo.account 
-left join claimer_op_current afo 
-    on ac.claimer = afo.account 
+        , coalesce(op_before_airdrop,0) as op_before_airdrop
+        , coalesce(op_after_airdrop,0) as op_after_airdrop
+    from airdrop_claimed ac  
+    left join claimer_delegate_before_airdrop bfd
+        on ac.claimer = bfd.delegator
+    left join claimer_delegate_current afd
+        on ac.claimer = afd.delegator
+    left join claimer_op_before_airdrop bfo 
+        on ac.claimer = bfo.account 
+    left join claimer_op_current afo 
+        on ac.claimer = afo.account 
+)
