@@ -41,7 +41,8 @@ with opt_amt_range as (
         , coalesce(cl.op_amt_adjdec,0) as claimed_op
 
         , bins.bin_idx
-        , round(bins.lb,2) as bin_lb
+        , bins.lb as bin_lb
+        , bins.ub as bin_ub
     from dune.oplabspbc.dataset_op_airdrop_4_simple_list all -- all addresses qualified for airdrop4
     left join evt_claimed cl
         on all.address = cl.claimer
@@ -52,7 +53,7 @@ with opt_amt_range as (
 
 select 
     bin_idx
-    , bin_lb 
+    , '[' || cast(round(bin_lb,0) as varchar) || ',' || cast(round(bin_ub,0) as varchar) || ')' as bin_label
 
     , count(address) as total_qualified_accounts
     , sum(is_claimed) as num_claimed_accounts
