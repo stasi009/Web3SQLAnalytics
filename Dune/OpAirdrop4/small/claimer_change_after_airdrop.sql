@@ -163,14 +163,14 @@ select
 from claimer_delegate_changes_tagged
 group by change_summary
 
-union all 
+-- union all 
 
-select 
-    '****** ALL ******'
-    , count(claimer) as num_claimers
-    , sum(vote_power_pre_ad) as vote_power_pre_ad
-    , sum(vote_power_post_ad) as vote_power_post_ad
-    , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
-from claimer_delegate_changes_tagged
+-- select 
+--     '****** ALL ******'
+--     , count(claimer) as num_claimers
+--     , sum(vote_power_pre_ad) as vote_power_pre_ad
+--     , sum(vote_power_post_ad) as vote_power_post_ad
+--     , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
+-- from claimer_delegate_changes_tagged
 
-order by num_claimers
+-- order by num_claimers
