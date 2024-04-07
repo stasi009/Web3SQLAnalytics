@@ -134,43 +134,20 @@ with airdrop_claimed as (
     )
 )
 
-, claimer_delegate_changes_tagged as (
-    select 
-        *  
-        -- !这里没有使用abs，尽管由于浮点数计算误差，有的account balance是-6e-16这个级别的负数
-        -- 但是考虑到这种极小的负数也能够被<1e-6处理，所以这里也就没使用abs
-        , case 
-            when vote_power_pre_ad <= 1e-6 and vote_power_post_ad > 1e-6
-                then 'Begin Delegate'
-            when vote_power_pre_ad > 1e-6 and vote_power_post_ad <= 1e-6
-                then 'Quit Delegate'
-            when vote_power_pre_ad <= 1e-6 and vote_power_post_ad <= 1e-6
-                then 'Still Not Delegate'
-            when delegate_before_airdrop = delegate_after_airdrop 
-                then 'Keep Same Delegate'
-            when delegate_before_airdrop <> delegate_after_airdrop 
-                then 'Change Delegate'  
-        end as change_summary
-    from claimer_delegate_changes
-)
-
 select 
-    change_summary
-    , count(claimer) as num_claimers
-    , sum(vote_power_pre_ad) as vote_power_pre_ad
-    , sum(vote_power_post_ad) as vote_power_post_ad
-    , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
-from claimer_delegate_changes_tagged
-group by change_summary
-
--- union all 
-
--- select 
---     '****** ALL ******'
---     , count(claimer) as num_claimers
---     , sum(vote_power_pre_ad) as vote_power_pre_ad
---     , sum(vote_power_post_ad) as vote_power_post_ad
---     , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
--- from claimer_delegate_changes_tagged
-
--- order by num_claimers
+*  
+-- !这里没有使用abs，尽管由于浮点数计算误差，有的account balance是-6e-16这个级别的负数
+-- 但是考虑到这种极小的负数也能够被<1e-6处理，所以这里也就没使用abs
+, case 
+    when vote_power_pre_ad <= 1e-6 and vote_power_post_ad > 1e-6
+        then 'Begin Delegate'
+    when vote_power_pre_ad > 1e-6 and vote_power_post_ad <= 1e-6
+        then 'Quit Delegate'
+    when vote_power_pre_ad <= 1e-6 and vote_power_post_ad <= 1e-6
+        then 'Still Not Delegate'
+    when delegate_before_airdrop = delegate_after_airdrop 
+        then 'Keep Same Delegate'
+    when delegate_before_airdrop <> delegate_after_airdrop 
+        then 'Change Delegate'  
+end as change_summary
+from claimer_delegate_changes
