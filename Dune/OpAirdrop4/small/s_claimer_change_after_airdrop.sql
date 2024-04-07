@@ -32,7 +32,7 @@ with airdrop_claimed as (
         select
             del.delegator 
             , del.toDelegate 
-            , row_number() over (partition by del.delegator order by del.evt_block_time desc) as rank
+            , row_number() over (partition by del.delegator order by del.delegate_tm desc) as rank
         from delegate_change_for_claimers del
         where delegate_tm < claim_tm -- delegate change before claim airdrop
     )
@@ -47,7 +47,7 @@ with airdrop_claimed as (
         select
             del.delegator 
             , del.toDelegate 
-            , row_number() over (partition by del.delegator order by del.evt_block_time desc) as rank
+            , row_number() over (partition by del.delegator order by del.delegate_tm desc) as rank
         from delegate_change_for_claimers del
     )
     where rank = 1
