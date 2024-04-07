@@ -159,7 +159,18 @@ select
     , count(claimer) as num_claimers
     , sum(vote_power_pre_ad) as vote_power_pre_ad
     , sum(vote_power_post_ad) as vote_power_post_ad
-    , if(sum(vote_power_pre_ad) < 1e-6, 0, sum(vote_power_post_ad)/sum(vote_power_pre_ad)-1) as vote_power_change_percentage
+    , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
 from claimer_delegate_changes_tagged
 group by change_summary
-order by num_claimers desc
+
+union all 
+
+select 
+    '****** ALL ******'
+    , count(claimer) as num_claimers
+    , sum(vote_power_pre_ad) as vote_power_pre_ad
+    , sum(vote_power_post_ad) as vote_power_post_ad
+    , sum(vote_power_post_ad) - sum(vote_power_pre_ad) as vote_power_change
+from claimer_delegate_changes_tagged
+
+order by num_claimers
