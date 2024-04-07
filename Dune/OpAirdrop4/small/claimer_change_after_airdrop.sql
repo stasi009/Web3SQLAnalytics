@@ -10,7 +10,7 @@ with airdrop_claimed as (
         and topic0 = 0x4ec90e965519d92681267467f775ada5bd214aa92c0dc93d90a5e880ce9ed026 -- claimed
 )
 
-, start_claim as (
+, first_claim as (
     select min(block_time) as first_claim_tm
     from airdrop_claimed
 )
@@ -37,8 +37,8 @@ with airdrop_claimed as (
             , del.toDelegate 
             , row_number() over (partition by del.delegator order by del.evt_block_time desc) as rank
         from delegate_change_for_claimers del
-        cross join start_claim sc
-        where del.evt_block_time < sc.first_claim_tm
+        cross join first_claim fc
+        where del.evt_block_time < fc.first_claim_tm
     )
     where rank = 1
 )
@@ -109,9 +109,12 @@ with airdrop_claimed as (
 
 --- ################################ combine
 select 
-    ac.claimer as delegator
+    ac.claimer
+    , ac.claim_op
+
     , delegate_before_airdrop
     , delegate_after_airdrop
+
     , op_before_airdrop
     , op_after_airdrop
 from airdrop_claimed ac  
