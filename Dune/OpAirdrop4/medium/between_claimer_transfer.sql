@@ -32,8 +32,8 @@ with eth_transfer as (
 select 
     '{{blockchain}}' as blockchain
     , transfer_asset
-    , if("from" < to, "from", to) as acount1
-    , if("from" < to, to, "from") as acount2
+    , if("from" < to, "from", to) as account1
+    , if("from" < to, to, "from") as account2
 from (
     select * from eth_transfer
     union all 
