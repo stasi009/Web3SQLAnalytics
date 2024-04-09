@@ -40,6 +40,7 @@ with opchain_nft_creation as (
         , count(distinct creator_address) filter (where is_firstcreate_day) as new_creators
     from opchain_nft_creation_extend 
     where create_day >= date '2024-02-21' - interval '30' day
+        and create_day < current_date -- void incomplete date
     group by 1
 
 )
