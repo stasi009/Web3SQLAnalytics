@@ -9,7 +9,7 @@ with claimer_and_his_nfts as (
         , nft.nft_contract_address
         , nft.collection_name
     from optimism_airdrop_4_optimism.MerkleDistributor_evt_Claimed as ac 
-    left join query_3452893 nft -- https://dune.com/queries/3452893
+    left join query_3452893 nft --Superchain & Ethereum L1 Creators, https://dune.com/queries/3452893
         on ac.account = nft.contract_creator_address
 )
 

@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3603530
 with opchain_nft_creation as (
     select 
         date_trunc('day',created_time) as create_day
