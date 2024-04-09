@@ -51,7 +51,7 @@ with days_since_announce_ad as (
 select 
     blockchain
     , project_contract_address
-    , project
+    , get_href(get_chain_explorer_address(blockchain, project_contract_address),project) as project
 
     , pread_days
     , postad_days
