@@ -1,4 +1,4 @@
-
+-- https://dune.com/queries/3603670
 with eth_transfer as (
     select 
         "from"
@@ -29,8 +29,19 @@ with eth_transfer as (
         and blockchain = '{{blockchain}}'
 )
 
-select * from eth_transfer
-union all 
-select * from erc20_transfer 
-union all 
-select * from nft_transfer
+select 
+    '{{blockchain}}' as blockchain
+    , transfer_asset
+    , if("from" < to, "from", to) as acount1
+    , if("from" < to, to, "from") as acount2
+from (
+    select * from eth_transfer
+    union all 
+    select * from erc20_transfer 
+    union all 
+    select * from nft_transfer
+)
+inner join optimism_airdrop_4_optimism.MerkleDistributor_evt_Claimed as ac1
+    on "from" = ac1.account  
+inner join optimism_airdrop_4_optimism.MerkleDistributor_evt_Claimed as ac2
+    on to = ac2.account
