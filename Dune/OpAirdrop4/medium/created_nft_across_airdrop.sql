@@ -42,3 +42,33 @@ with opchain_nft_creation as (
         and create_day < current_date -- void incomplete date
     group by 1
 )
+
+, daily_creation_median as (
+    select 
+        is_before_ad
+        , approx_percentile(total_creations, 0.5) as med_total_creations
+        , approx_percentile(creations_from_new_creators, 0.5) as med_creations_from_new
+    from daily_creators
+    group by 1
+)
+
+select 
+    create_day
+    , if(is_before_ad, 'Before announce 🪂', 'After announce 🪂') as period
+
+    , if(is_before_ad, total_creations, null )  as pread_total_creations
+    , if(not is_before_ad, total_creations, null)  as postad_total_creations
+
+    , if(is_before_ad, creations_from_new_creators, null )  as pread_creations_from_new_creators
+    , if(not is_before_ad, creations_from_new_creators, null)  as postad_creations_from_new_creators
+
+    , if(is_before_ad, m.med_total_creations, null )  as pread_med_total_creations
+    , if(not is_before_ad, m.med_total_creations, null)  as postad_med_total_creations
+
+    , if(is_before_ad, m.med_creations_from_new, null )  as pread_med_creations_from_new
+    , if(not is_before_ad, m.med_creations_from_new, null)  as postad_med_creations_from_new
+
+from daily_creators
+inner join daily_creation_median m 
+    using (is_before_ad)
+order by 1
