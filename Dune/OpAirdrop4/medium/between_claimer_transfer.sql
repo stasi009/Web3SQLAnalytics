@@ -45,3 +45,4 @@ inner join optimism_airdrop_4_optimism.MerkleDistributor_evt_Claimed as ac1
     on "from" = ac1.account  
 inner join optimism_airdrop_4_optimism.MerkleDistributor_evt_Claimed as ac2
     on to = ac2.account
+where "from" <> to
