@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3603698
 with between_claimers_transfers as (
     select * from "query_3603670(backdays='365',blockchain='ethereum')" -- between_claimer_transfer
     union all
