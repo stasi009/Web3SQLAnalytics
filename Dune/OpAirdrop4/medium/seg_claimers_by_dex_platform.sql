@@ -1,22 +1,7 @@
 
-with nft_trades as (
+with dex_trades as (
     select 
-        'nft' as trade_type
-        , blockchain
-        , project_contract_address
-        , project
-        , t.trader
-    from nft.trades
-    cross join unnest(array[buyer, seller]) as t(trader)
-    where blockchain in ('optimism', 'ethereum', 'zora', 'base')
-        and block_time >= current_date - interval '{{backdays}}' day
-        and block_time < current_date -- avoid incomplete date
-)
-
-, dex_trades as (
-    select 
-        'dex' as trade_type
-        , blockchain
+        blockchain
         , project_contract_address
         , project
         , t.trader
@@ -27,23 +12,16 @@ with nft_trades as (
         and block_time < current_date -- avoid incomplete date
 )
 
-, all_trades as (
-    select * from nft_trades
-    union all 
-    select * from dex_trades
-)
-
 , claimer_trades as (
     select 
         ac.account as claimer
 
-        , t.trade_type
         , t.blockchain
         , t.project_contract_address
         , t.project
 
     from optimism_airdrop_4_optimism.MerkleDistributor_evt_Claimed as ac 
-    inner join all_trades t
+    inner join dex_trades t
         on ac.account = t.trader
 )
 
