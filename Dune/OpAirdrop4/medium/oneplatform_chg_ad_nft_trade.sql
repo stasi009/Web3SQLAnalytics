@@ -5,15 +5,16 @@ with days_since_announce_ad as (
     select date_diff('day', date '2024-02-21', current_date) as days
 )
 
-, daily_nft_mint as (
+, daily_nft_trade as (
     select
         block_date
         , block_date < date '2024-02-21' as is_before_ad -- flag whether before announce airdrop
 
-        , count(tx_hash) as num_txns
-        , count(distinct buyer) as num_minters -- buyers are mint to recipient
-        , sum(amount_usd) as mint_cost_usd
-    from nft.mints
+        , count(tx_hash)/2.0 as num_txns --/2是因为按buyer & seller各统计了一次，重复了
+        , count(distinct tmp.trader) as num_traders
+        , sum(amount_usd)/2.0 as trade_usd --/2是因为按buyer & seller各统计了一次，重复了
+    from nft.trades
+    cross join unnest(array[buyer, seller]) as tmp(trader)
     cross join days_since_announce_ad dsan
     where blockchain = '{{blockchain}}'
         and project_contract_address = {{project_contract_address}}
@@ -26,9 +27,9 @@ with days_since_announce_ad as (
 , medians as (
     select 
         is_before_ad
-        , approx_percentile(num_minters, 0.5) as med_minters
+        , approx_percentile(num_traders, 0.5) as med_traders
         , approx_percentile(num_txns, 0.5) as med_txns
-        , approx_percentile(mint_cost_usd, 0.5) as med_mint_usd
+        , approx_percentile(trade_usd, 0.5) as med_trade_usd
     from daily_nft_mint
     group by 1
 )
@@ -41,17 +42,17 @@ select
     , if(is_before_ad, md.med_txns, null) as pread_med_txns
     , if(not is_before_ad, md.med_txns, null) as postad_med_txns
 
-    , if(is_before_ad, dmt.num_minters , null) as pread_minters
-    , if(not is_before_ad, dmt.num_minters , null) as postad_minters
-    , if(is_before_ad, md.med_minters , null) as pread_med_minters
-    , if(not is_before_ad, md.med_minters , null) as postad_med_minters
+    , if(is_before_ad, dmt.num_traders , null) as pread_traders
+    , if(not is_before_ad, dmt.num_traders , null) as postad_traders
+    , if(is_before_ad, md.med_traders , null) as pread_med_traders
+    , if(not is_before_ad, md.med_traders , null) as postad_med_traders
 
-    , if(is_before_ad, dmt.mint_cost_usd , null) as pread_usd
-    , if(not is_before_ad, dmt.mint_cost_usd , null) as postad_usd
-    , if(is_before_ad, md.med_mint_usd , null) as pread_med_usd
-    , if(not is_before_ad, md.med_mint_usd , null) as postad_med_usd
+    , if(is_before_ad, dmt.trade_usd , null) as pread_usd
+    , if(not is_before_ad, dmt.trade_usd , null) as postad_usd
+    , if(is_before_ad, md.med_trade_usd , null) as pread_med_usd
+    , if(not is_before_ad, md.med_trade_usd , null) as postad_med_usd
 
-from daily_nft_mint dmt
+from daily_nft_trade dmt
 inner join medians md
     using (is_before_ad)
 
