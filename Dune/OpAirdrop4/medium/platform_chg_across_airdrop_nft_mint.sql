@@ -26,7 +26,7 @@ with days_since_announce_ad as (
     group by 1,2,3,4,5
 )
 
-, each_contract_mint_across_ad as (
+, each_project_mint_across_ad as (
     select 
         blockchain
         , project_contract_address
@@ -35,7 +35,7 @@ with days_since_announce_ad as (
         , count(block_date) filter (where is_before_ad) as pread_days
         , count(block_date) filter (where not is_before_ad) as postad_days
         
-        , approx_percentile(num_minters, 0.5) filter (where is_before_ad) as pread_med_minterrs
+        , approx_percentile(num_minters, 0.5) filter (where is_before_ad) as pread_med_minters
         , approx_percentile(num_minters, 0.5) filter (where not is_before_ad) as postad_med_minters
 
         , approx_percentile(num_txns, 0.5) filter (where is_before_ad) as pread_med_txns
@@ -56,9 +56,9 @@ select
     , pread_days
     , postad_days
 
-    , pread_med_minterrs
+    , pread_med_minters
     , postad_med_minters
-    , cast(postad_med_minters as double)/pread_med_minterrs - 1 as minters_chg_rate
+    , cast(postad_med_minters as double)/pread_med_minters - 1 as minters_chg_rate
     
     , pread_med_txns
     , postad_med_txns
@@ -68,11 +68,11 @@ select
     , postad_med_mint_usd
     , postad_med_mint_usd/pread_med_mint_usd - 1 as mint_usd_chg_rate
 
-from each_contract_mint_across_ad
+from each_project_mint_across_ad
 where pread_days >= 30
     and postad_days >= 30
     
-    and pread_med_minterrs > 10
+    and pread_med_minters > 10
     and pread_med_txns > 10
     and pread_med_mint_usd > 0
     
