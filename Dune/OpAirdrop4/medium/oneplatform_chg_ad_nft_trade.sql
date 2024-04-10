@@ -1,4 +1,4 @@
--- https://dune.com/queries/3607362
+-- https://dune.com/queries/3607426
 with days_since_announce_ad as (
     -- https://twitter.com/Optimism/status/1760002821120983200
     -- airdrop is announced at 2024-02-21
@@ -57,3 +57,8 @@ inner join medians md
     using (is_before_ad)
 
 order by block_date
+
+-- select * from "query_3607426(blockchain='ethereum',filter_project='no')"
+-- select * from "query_3607426(blockchain='optimism',filter_project='no')"
+-- select * from "query_3607426(blockchain='base',filter_project='no')"
+-- select * from "query_3607426(blockchain='zora',filter_project='no')"

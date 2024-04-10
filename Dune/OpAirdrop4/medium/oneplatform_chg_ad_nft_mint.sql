@@ -56,3 +56,8 @@ inner join medians md
     using (is_before_ad)
 
 order by block_date
+
+-- select * from "query_3607362(blockchain='ethereum',filter_project='no')"
+-- select * from "query_3607362(blockchain='optimism',filter_project='no')"
+-- select * from "query_3607362(blockchain='base',filter_project='no')"
+-- select * from "query_3607362(blockchain='zora',filter_project='no')"
