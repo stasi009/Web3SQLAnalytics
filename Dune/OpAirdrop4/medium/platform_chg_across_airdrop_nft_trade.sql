@@ -4,7 +4,7 @@ with days_since_announce_ad as (
     select date_diff('day', date '2024-02-21', current_date) as days
 )
 
-, daily_nft_mint as (
+, daily_nft_trades as (
     select
         block_date
         , block_date < date '2024-02-21' as is_before_ad -- flag whether before announce airdrop
@@ -13,20 +13,20 @@ with days_since_announce_ad as (
         , project_contract_address
         , project
 
-        , count(tx_hash) as num_txns
-        , count(distinct buyer) as num_minters -- buyers are mint to recipient
-        , sum(amount_usd) as mint_cost_usd
-    from nft.mints
+        , count(tx_hash)/2.0 as num_txns --/2是因为按buyer & seller各统计了一次，重复了
+        , count(distinct tmp.trader) as num_traders
+        , sum(amount_usd)/2.0 as amount_usd --/2是因为按buyer & seller各统计了一次，重复了
+    from nft.trades
+    cross join unnest(array[buyer, seller]) as tmp(trader)
     cross join days_since_announce_ad dsan
     where blockchain in ('optimism', 'ethereum', 'zora', 'base')
         -- 今天距离announce过去多少天，就自announce向前回溯多少天
         and block_time >= date_add('day', -1*dsan.days, date '2024-02-21') 
         and block_time < current_date -- avoid incomplete date
-        and nft_contract_address <> project_contract_address --通过nft market来mint的
     group by 1,2,3,4,5
 )
 
-, each_contract_mint_across_ad as (
+, each_project_trades_across_ad as (
     select 
         blockchain
         , project_contract_address
@@ -35,16 +35,16 @@ with days_since_announce_ad as (
         , count(block_date) filter (where is_before_ad) as pread_days
         , count(block_date) filter (where not is_before_ad) as postad_days
         
-        , approx_percentile(num_minters, 0.5) filter (where is_before_ad) as pread_med_minterrs
-        , approx_percentile(num_minters, 0.5) filter (where not is_before_ad) as postad_med_minters
+        , approx_percentile(num_traders, 0.5) filter (where is_before_ad) as pread_med_traders
+        , approx_percentile(num_traders, 0.5) filter (where not is_before_ad) as postad_med_traders
 
         , approx_percentile(num_txns, 0.5) filter (where is_before_ad) as pread_med_txns
         , approx_percentile(num_txns, 0.5) filter (where not is_before_ad) as postad_med_txns
 
-        , approx_percentile(mint_cost_usd, 0.5) filter (where is_before_ad) as pread_med_mint_usd
-        , approx_percentile(mint_cost_usd, 0.5) filter (where not is_before_ad) as postad_med_mint_usd
+        , approx_percentile(amount_usd, 0.5) filter (where is_before_ad) as pread_med_usd
+        , approx_percentile(amount_usd, 0.5) filter (where not is_before_ad) as postad_med_usd
 
-    from daily_nft_mint
+    from daily_nft_trades
     group by 1,2,3
 )
 
@@ -56,28 +56,28 @@ select
     , pread_days
     , postad_days
 
-    , pread_med_minterrs
-    , postad_med_minters
-    , cast(postad_med_minters as double)/pread_med_minterrs - 1 as minters_chg_rate
+    , pread_med_traders
+    , postad_med_traders
+    , cast(postad_med_traders as double)/pread_med_traders - 1 as traders_chg_rate
     
     , pread_med_txns
     , postad_med_txns
-    , cast(postad_med_txns as double)/pread_med_txns - 1 as mint_txn_chg_rate
+    , cast(postad_med_txns as double)/pread_med_txns - 1 as trade_txn_chg_rate
 
-    , pread_med_mint_usd
-    , postad_med_mint_usd
-    , postad_med_mint_usd/pread_med_mint_usd - 1 as mint_usd_chg_rate
+    , pread_med_usd
+    , postad_med_usd
+    , postad_med_usd/pread_med_usd - 1 as trade_usd_chg_rate
 
-from each_contract_mint_across_ad
+from each_project_trades_across_ad
 where pread_days >= 30
     and postad_days >= 30
     
-    and pread_med_minterrs > 10
+    and pread_med_traders > 10
     and pread_med_txns > 10
-    and pread_med_mint_usd > 0
+    and pread_med_usd > 0
     
-    and postad_med_minters > 0
+    and postad_med_traders > 0
     and postad_med_txns > 0
-    and postad_med_mint_usd > 0
+    and postad_med_usd > 0
 
-order by mint_usd_chg_rate desc
+order by trade_usd_chg_rate desc
