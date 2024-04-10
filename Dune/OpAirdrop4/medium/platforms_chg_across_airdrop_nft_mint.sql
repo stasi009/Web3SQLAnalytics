@@ -22,7 +22,7 @@ with days_since_announce_ad as (
         -- 今天距离announce过去多少天，就自announce向前回溯多少天
         and block_time >= date_add('day', -1*dsan.days, date '2024-02-21') 
         and block_time < current_date -- avoid incomplete date
-        and nft_contract_address <> project_contract_address --通过nft market来mint的
+        and nft_contract_address <> project_contract_address --not native mint,必须是通过nft market来mint的
     group by 1,2,3,4,5
 )
 
