@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3607362
 with days_since_announce_ad as (
     -- https://twitter.com/Optimism/status/1760002821120983200
     -- airdrop is announced at 2024-02-21
@@ -33,17 +34,22 @@ with days_since_announce_ad as (
 )
 
 select 
-    is_before_ad
-    , dmt.block_date 
+    dmt.block_date 
 
-    , dmt.num_txns
-    , md.med_txns
+    , if(is_before_ad, dmt.num_txns, null) as pread_txns
+    , if(not is_before_ad, dmt.num_txns, null) as postad_txns
+    , if(is_before_ad, md.med_txns, null) as pread_med_txns
+    , if(not is_before_ad, md.med_txns, null) as postad_med_txns
 
-    , dmt.num_minters 
-    , md.med_minters
+    , if(is_before_ad, dmt.num_minters , null) as pread_minters
+    , if(not is_before_ad, dmt.num_minters , null) as postad_minters
+    , if(is_before_ad, md.med_minters , null) as pread_med_minters
+    , if(not is_before_ad, md.med_minters , null) as postad_med_minters
 
-    , dmt.mint_cost_usd
-    , md.med_mint_usd
+    , if(is_before_ad, dmt.mint_cost_usd , null) as pread_usd
+    , if(not is_before_ad, dmt.mint_cost_usd , null) as postad_usd
+    , if(is_before_ad, md.med_mint_usd , null) as pread_med_usd
+    , if(not is_before_ad, md.med_mint_usd , null) as postad_med_usd
 
 from daily_nft_mint dmt
 inner join medians md
