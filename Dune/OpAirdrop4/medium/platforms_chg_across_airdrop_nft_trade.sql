@@ -1,3 +1,4 @@
+-- https://dune.com/queries/3605221
 with days_since_announce_ad as (
     -- https://twitter.com/Optimism/status/1760002821120983200
     -- airdrop is announced at 2024-02-21

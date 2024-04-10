@@ -30,7 +30,7 @@ with days_since_announce_ad as (
         , approx_percentile(num_traders, 0.5) as med_traders
         , approx_percentile(num_txns, 0.5) as med_txns
         , approx_percentile(trade_usd, 0.5) as med_trade_usd
-    from daily_nft_mint
+    from daily_nft_trade
     group by 1
 )
 
