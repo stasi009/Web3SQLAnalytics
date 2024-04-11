@@ -6,8 +6,9 @@ with days_since_announce_ad as (
 )
 
 , nft_activities as (
-    select 
-        block_date 
+    select
+        blockchain 
+        , block_date 
         , tx_hash 
         , buyer 
         , seller
@@ -16,8 +17,9 @@ with days_since_announce_ad as (
 
     union all 
 
-    select 
-        block_date 
+    select
+        blockchain 
+        , block_date 
         , tx_hash 
         , buyer 
         , seller -- always zero address
