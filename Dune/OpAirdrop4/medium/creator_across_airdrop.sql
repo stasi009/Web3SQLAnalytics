@@ -29,6 +29,12 @@ with opchain_nft_creation as (
         using (creator_address)
 )
 
+, days_since_announce_ad as (
+    -- https://twitter.com/Optimism/status/1760002821120983200
+    -- airdrop is announced at 2024-02-21
+    select date_diff('day', date '2024-02-21', current_date) as days
+)
+
 , daily_creators as (
     select 
         create_day 
@@ -39,7 +45,8 @@ with opchain_nft_creation as (
         , count(distinct creator_address) as total_creators
         , count(distinct creator_address) filter (where is_firstcreate_day) as new_creators
     from opchain_nft_creation_extend 
-    where create_day >= date '2024-02-21' - interval '30' day
+    cross join days_since_announce_ad dsan
+    where create_day >= date_add('day', -1*dsan.days, date '2024-02-21') 
         and create_day < current_date -- void incomplete date
     group by 1
 
