@@ -7,6 +7,7 @@ with opchain_nft_creation as (
         , creator_address
         -- , is_first_time_flag -- 某creator在某blockchain上第1次create，并非全局第一次
     from dune.oplabspbc.result_superchain_nft_contracts_cleaned_opm_base_zora -- https://dune.com/queries/3181305
+    where if('{{filter_chain}}' = 'yes', blockchain='{{blockchain}}',true)
 )
 
 , first_create_day as (
