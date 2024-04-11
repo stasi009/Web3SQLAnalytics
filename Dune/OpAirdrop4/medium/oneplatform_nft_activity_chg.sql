@@ -5,15 +5,35 @@ with days_since_announce_ad as (
     select date_diff('day', date '2024-02-21', current_date) as days
 )
 
+, nft_activities as (
+    select 
+        block_date 
+        , tx_hash 
+        , buyer 
+        , seller
+        , amount_usd 
+    from nft.trades
+
+    union all 
+
+    select 
+        block_date 
+        , tx_hash 
+        , buyer 
+        , seller -- always zero address
+        , amount_usd 
+    from nft.mints
+)
+
 , daily_nft_trade as (
     select
         block_date
         , block_date < date '2024-02-21' as is_before_ad -- flag whether before announce airdrop
 
         , count(tx_hash)/2.0 as num_txns --/2是因为按buyer & seller各统计了一次，重复了
-        , count(distinct tmp.trader) as num_traders
+        , count(distinct tmp.trader)-1 as num_traders -- exclude 0x000，zero address在nft.mints中是seller
         , sum(amount_usd)/2.0 as trade_usd --/2是因为按buyer & seller各统计了一次，重复了
-    from nft.trades
+    from nft_activities
     cross join unnest(array[buyer, seller]) as tmp(trader)
     cross join days_since_announce_ad dsan
     where blockchain = '{{blockchain}}'
