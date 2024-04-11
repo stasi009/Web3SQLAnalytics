@@ -9,6 +9,7 @@ with days_since_announce_ad as (
     select
         blockchain 
         , block_date 
+        , project_contract_address
         , tx_hash 
         , buyer 
         , seller
@@ -20,6 +21,7 @@ with days_since_announce_ad as (
     select
         blockchain 
         , block_date 
+        , project_contract_address
         , tx_hash 
         , buyer 
         , seller -- always zero address
@@ -41,8 +43,8 @@ with days_since_announce_ad as (
     where blockchain = '{{blockchain}}'
         and if('{{filter_project}}'='yes', project_contract_address = {{project_contract_address}}, true)
         -- 今天距离announce过去多少天，就自announce向前回溯多少天
-        and block_time >= date_add('day', -1*dsan.days, date '2024-02-21') 
-        and block_time < current_date -- avoid incomplete date
+        and block_date >= date_add('day', -1*dsan.days, date '2024-02-21') 
+        and block_date < current_date -- avoid incomplete date
     group by 1,2
 )
 

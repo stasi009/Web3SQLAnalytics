@@ -82,3 +82,7 @@ from daily_creators
 inner join daily_creators_median m 
     using (is_before_ad)
 order by 1
+
+-- select * from "query_3600731(filter_chain='yes',blockchain='optimism')"
+-- select * from "query_3600731(filter_chain='yes',blockchain='base')"
+-- select * from "query_3600731(filter_chain='yes',blockchain='zora')"
