@@ -1,4 +1,5 @@
 
+-- 某个delegate voting power的变化次数，与这个delegate投票次数的关系
 with vote_power_changes as (
     select 
         delegate 
