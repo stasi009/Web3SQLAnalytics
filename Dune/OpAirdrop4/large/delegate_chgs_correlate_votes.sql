@@ -23,7 +23,7 @@ with votes as (
         bin_idx
         , lb 
         , ub
-        , '[' || cast(floor(exp(lb)) as varchar) || ',' || cast(floor(exp(ub)) as varchar) || ')' as bin_label
+        , '[' || cast(cast(exp(lb) as int) as varchar) || ',' || cast(cast(exp(ub) as int) as varchar) || ')' as bin_label
     from (
         select 
             bin_idx
