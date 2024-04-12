@@ -1,3 +1,5 @@
+-- https://dune.com/queries/3615639
+-- 计算delegate voting power的集中度
 with first_airdrop_claim as (
     select 
         min(evt_block_time) as first_claim_tm
