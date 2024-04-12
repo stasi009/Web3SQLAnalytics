@@ -43,7 +43,7 @@ with first_airdrop_claim as (
 --         select 
 --             total_voting_power
 --             , total_delegators
---             , rank() over (order by block_time desc) as latest_rank
+--             , row_number() over (order by block_time desc) as latest_rank
 --         from op_governance_optimism.delegates del
 --         cross join first_airdrop_claim fc
 --         where 
@@ -55,8 +55,49 @@ with first_airdrop_claim as (
 --     where latest_rank = 1
 -- )
 
+, latest_voting_power_with_percentage as (
+    select 
+        delegate 
+
+        , current_voting_power
+        , current_voting_power * 100.0 / total_voting_power as voting_power_percentage
+        , rank() over (order by current_voting_power desc) vote_power_rank 
+
+        , number_of_delegators
+        , number_of_delegators * 100.0 / total_delegators as delegator_percentage
+        , rank() over (order by number_of_delegators desc) delegator_rank 
+
+    from latest_voting_power
+    cross join total_vote_power
+)
+
+, hhi as (
+    select 
+        sum(power(voting_power_percentage,2)) as voting_power_hhi
+        , sum(power(delegator_percentage, 2)) as delegators_hhi
+    from  latest_voting_power_with_percentage
+)
+
+, top_vote_power_coverage as (
+    select 
+        sum(voting_power_percentage) as topn_vote_power_percentage
+    from latest_voting_power_with_percentage
+    where vote_power_rank <= {{topn_delegates}}
+)
+
+, top_delegator_coverage as (
+    select 
+        sum(delegator_percentage) as topn_delegator_percentage
+    from latest_voting_power_with_percentage
+    where delegator_rank <= {{topn_delegates}}
+)
+
 select 
-    sum(power(current_voting_power/total_voting_power,2)) as voting_power_hhi
-    , sum(power(cast(number_of_delegators as double)/total_delegators,2)) as delegators_hhi
-from latest_voting_power
-cross join total_vote_power
+    h.* 
+    , tvp.*  
+    , td.*
+from hhi h 
+cross join top_vote_power_coverage tvp 
+cross join top_delegator_coverage td
+
+
