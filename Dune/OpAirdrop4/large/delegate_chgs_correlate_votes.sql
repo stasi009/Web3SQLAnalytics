@@ -1,4 +1,6 @@
 -- 某个delegate voting power的变化次数，与这个delegate投票次数的关系
+-- https://dune.com/queries/3615697
+
 with votes as (
     select 
         voter 
