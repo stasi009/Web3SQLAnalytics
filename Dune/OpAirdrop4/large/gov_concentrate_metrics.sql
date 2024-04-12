@@ -77,7 +77,7 @@ with first_airdrop_claim as (
     select 
         sum(power(voting_power_percentage,2)) as voting_power_hhi
         , sum(power(delegator_percentage, 2)) as delegators_hhi
-    from  latest_voting_power_with_percentage
+    from latest_voting_power_with_percentage
 )
 
 , top_vote_power_coverage as (
@@ -95,10 +95,12 @@ with first_airdrop_claim as (
 )
 
 select 
-    h.* 
+    tt.*
+    , h.* 
     , tvp.*  
     , td.*
-from hhi h 
+from total_vote_power tt
+cross from hhi h 
 cross join top_vote_power_coverage tvp 
 cross join top_delegator_coverage td
 
