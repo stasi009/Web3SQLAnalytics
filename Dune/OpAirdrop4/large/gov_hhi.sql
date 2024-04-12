@@ -14,7 +14,7 @@ with first_airdrop_claim as (
             delegate
             , current_voting_power
             , number_of_delegators
-            , rank() over (partition by delegate order by block_time desc) as latest_rank
+            , row_number() over (partition by delegate order by block_time desc) as latest_rank
         from op_governance_optimism.delegates del
         cross join first_airdrop_claim fc
         where 
@@ -34,6 +34,7 @@ with first_airdrop_claim as (
 )
 
 -- 换一种方式计算total_voting_power和total_delegators,结果应该一致
+-- !但是实际计算结果有误差（一个可能原因是，如果block_time相同时有若干voting power change，那么row_number=1返回的是哪一个？？）
 -- , total_vote_power as (
 --     select 
 --         total_voting_power
@@ -54,4 +55,8 @@ with first_airdrop_claim as (
 --     where latest_rank = 1
 -- )
 
-select * from total_vote_power
+select 
+    sum(power(current_voting_power/total_voting_power,2)) as voting_power_hhi
+    , sum(power(cast(number_of_delegators as double)/total_delegators,2)) as delegators_hhi
+from latest_voting_power
+cross join total_vote_power
