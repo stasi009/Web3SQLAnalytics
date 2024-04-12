@@ -3,7 +3,9 @@ with vote_power_changes as (
     select 
         delegate 
         , count(tx_hash) as num_changes
-    from op_governance_optimism.delegates
+    from op_governance_optimism.delegates del
+    inner join op_governance_optimism.delegates_addresses as adr 
+        on del.delegate = adr.address -- 只考虑那些大delegate，不考虑小的delegate，排除噪声
     group by 1
     order by num_changes desc
 )
