@@ -2,7 +2,7 @@
 with votes as (
     select 
         voter 
-        , count(voter) as num_votes -- 不能用count(tx_hash)，来自snap的tx_hash都是null
+        , ln(count(voter)) as num_votes -- 不能用count(tx_hash)，来自snap的tx_hash都是null
     from governance_optimism.proposal_votes
     group by 1
 )
@@ -11,10 +11,10 @@ with votes as (
     -- 这里将lower bound比actual minimum更小，upper bound比actual maximum更大
     -- 这样保证[lb, ub)能够囊括全部范围
     select 
-        min(num_votes)-1 as min_votes
+        min(num_votes)*0.99 as min_votes
         -- upper bound is max(num_votes)+1
         -- lower bound is min(num_votes)-1
-        , (max(num_votes) - min(num_votes)+2.0)/{{bins}} as bin_width
+        , (max(num_votes)*1.01 - min(num_votes)*0.99)/{{bins}} as bin_width
     from votes 
 )
 
@@ -41,7 +41,7 @@ with votes as (
 , vote_power_changes as (
     select 
         delegate 
-        , count(tx_hash) as num_changes
+        , ln(count(tx_hash)) as num_changes
     from op_governance_optimism.delegates del
     group by 1
 )
