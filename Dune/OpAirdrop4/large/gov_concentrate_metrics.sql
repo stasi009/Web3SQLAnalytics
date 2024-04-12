@@ -100,8 +100,6 @@ select
     , tvp.*  
     , td.*
 from total_vote_power tt
-cross from hhi h 
+cross join hhi h 
 cross join top_vote_power_coverage tvp 
 cross join top_delegator_coverage td
-
-
