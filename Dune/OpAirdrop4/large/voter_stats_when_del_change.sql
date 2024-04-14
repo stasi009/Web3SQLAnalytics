@@ -20,13 +20,55 @@ with deduplicated_vote_data as (--governance_optimism.proposal_votes有重复的
         , proposal_id
         , choice_name
         , votingweightage
-        , count(proposal_id) over (partition by voter order by date_timestamp) as cumsum_votes
+        , count(proposal_id) over (partition by voter order by date_timestamp) as cumsum_voted
     from deduplicated_vote_data
 )
 
+, delegate_changes as (
+    select 
+        * 
 
+        , case 
+            when toDelVoteWeight > fromDelVoteWeight then 'W+'
+            when toDelVoteWeight < fromDelVoteWeight then 'W-'
+            else 'W='
+        end as voteweight_chg_mode
 
-select *  
-from voter_stats
-where voter = 0x46abfe1c972fca43766d6ad70e1c1df72f4bb4d1
-order by current_vote_tm
+        , case 
+            when toDelNumVoted > fromDelNumVoted then 'V+'
+            when toDelNumVoted < fromDelNumVoted then 'V-'
+            else 'V='
+        end as numvoted_chg_mode
+    
+    from (
+        select 
+            evt_tx_hash
+            , dc.delegator 
+
+            , fromDelegate
+            , coalesce(fv.votingweightage,0.0) as fromDelVoteWeight
+            , coalesce(fv.cumsum_voted,0) as fromDelNumVoted
+
+            , toDelegate
+            , coalesce(tv.votingweightage,0.0) as toDelVoteWeight
+            , coalesce(tv.cumsum_voted,0) as toDelNumVoted
+        from op_optimism.GovernanceToken_evt_DelegateChanged dc
+        left join voter_stats fv
+            on dc.fromDelegate = fv.voter 
+            and dc.evt_block_time >= fv.current_vote_tm
+            and dc.evt_block_time < fv.next_vote_tm
+        left join voter_stats tv 
+            on dc.toDelegate = tv.voter
+            and dc.evt_block_time >= tv.current_vote_tm
+            and dc.evt_block_time < tv.next_vote_tm
+        where dc.fromDelegate <> dc.toDelegate
+    )
+)
+
+select 
+    voteweight_chg_mode
+    , numvoted_chg_mode
+    , count(evt_tx_hash) as num_changes
+from delegate_changes
+group by 1,2
+order by num_changes desc
