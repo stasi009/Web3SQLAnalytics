@@ -54,11 +54,11 @@ with delegate_changes as (
         , dc.delegator_op_balance
 
         , dc.fromDelegate
-        , dc.fromDelVoteWeight
+        , dc.fromDelVotePower
         , coalesce(fv.cumsum_voted,0) as fromDelNumVoted
 
         , dc.toDelegate
-        , dc.toDelVoteWeight
+        , dc.toDelVotePower
         , coalesce(tv.cumsum_voted,0) as toDelNumVoted
     from delegate_changes dc
     left join voter_stats fv
@@ -70,3 +70,29 @@ with delegate_changes as (
         and dc.block_time >= tv.current_vote_tm
         and dc.block_time < tv.next_vote_tm
 )
+
+, delegate_changes_with_direction as (
+    select 
+        * 
+
+        , case 
+            when toDelVotePower > fromDelVotePower then 'W+'
+            when toDelVotePower < fromDelVotePower then 'W-'
+            else 'W='
+        end as voteweight_chg_direction
+
+        , case 
+            when toDelNumVoted > fromDelNumVoted then 'V+'
+            when toDelNumVoted < fromDelNumVoted then 'V-'
+            else 'V='
+        end as numvoted_chg_direction
+    from delegate_changes_votenum
+)
+
+select 
+    voteweight_chg_direction
+    , numvoted_chg_direction
+    , count(1) as num_changes
+from delegate_changes_with_direction
+group by 1,2
+order by num_changes desc
